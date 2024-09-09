@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:title="@string/video_finished">
+        <menu>
+            <group
+                android:checkableBehavior="single"
+                android:enabled="true">
+                <item
+                    android:id="@+id/doNothing"
+                    android:title="@string/do_nothing" />
+                <item
+                    android:id="@+id/replayButton"
+                    android:title="@string/replay" />
+                <item
+                    android:id="@+id/playNextVideo"
+                    android:title="@string/play_next_video" />
+            </group>
+        </menu>
+    </item>
+    <item
+        android:id="@+id/shuffleMode"
+        android:checkable="true"
+        android:checked="false"
+        android:title="@string/shuffle" />
+    <item
+        android:id="@+id/musicMode"
+        android:checkable="true"
+        android:checked="false"
+        android:title="@string/music_mode"
+        app:actionLayout="@layout/switch_item"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/about"
+        android:title="@string/about" />
+</menu>

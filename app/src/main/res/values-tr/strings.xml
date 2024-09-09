@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="video_finished">Video bitince</string>
+    <string name="do_nothing">Hiçbir şey yapma</string>
+    <string name="replay">Tekrar oynat</string>
+    <string name="play_next_video">Sonraki videoya geç</string>
+    <string name="shuffle">Karışık oynat</string>
+    <string name="about">Hakkında</string>
+    <string name="insert_above">Üstüne ekle</string>
+    <string name="insert_below">Altına ekle</string>
+    <string name="move">Taşı</string>
+    <string name="paste">Yapıştır</string>
+    <string name="edit">Düzenle</string>
+    <string name="delete">Sil</string>
+    <string name="cut">Kes</string>
+    <string name="copy">Kopyala</string>
+    <string name="open_in_youtube">YouTube\'da aç</string>
+    <string name="add_playlist">Oynatma listesi ekle</string>
+    <string name="edit_playlist">Oynatma listesini düzenle</string>
+    <string name="title">Başlık</string>
+    <string name="default_title">Oynatma listem</string>
+    <string name="icon">Simge</string>
+    <string name="url_id_search">ID, URL girin ya da arayın</string>
+    <string name="delete_video_alert">Bu video silinsin mi?</string>
+    <string name="delete_playlist_alert">Bu oynatma listesi silinsin mi?</string>
+    <string name="dialog_button_add">Ekle</string>
+    <string name="dialog_button_apply">Uygula</string>
+    <string name="dialog_button_cancel">İptal</string>
+    <string name="dialog_button_delete">Sil</string>
+    <string name="cut_to_clipboard">Video yapıştırmak için kesildi.</string>
+    <string name="copy_to_clipboard">Video yapıştırmak için kopyalandı.</string>
+    <string name="player_not_ready">Oynatıcı hazır değil. Lütfen daha sonra tekrar deneyin.</string>
+    <string name="dialog_button_no">Hayır</string>
+    <string name="add_video">Video ekle</string>
+    <string name="music_mode">Müzik modu</string>
+    <string name="import_playlist">Listeyi içe aktar</string>
+    <string name="share">Paylaş</string>
+</resources>
