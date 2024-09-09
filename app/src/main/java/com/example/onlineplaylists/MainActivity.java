@@ -15,8 +15,11 @@ import android.content.res.Configuration;
 import android.graphics.Color;
 import android.hardware.SensorManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -149,19 +152,23 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        /*
-        OrientationEventListener orientationEventListener = new OrientationEventListener(MainActivity.this, SensorManager.SENSOR_DELAY_NORMAL) {
-            @Override
-            public void onOrientationChanged(int orientation) {
-                if (orientation != 180) isPortrait = orientation > 300 || orientation < 60 ;
-                updateLayout();
-            }
-        };
-        orientationEventListener.enable();
-         */
         Intent intent = getIntent();
         if (Objects.equals(intent.getAction(), Intent.ACTION_VIEW) && intent.getData() != null)
             importPlaylist(getIntent().getData());
+        checkBatteryOptimizationSettings();
+    }
+
+    private void checkBatteryOptimizationSettings() {
+        PowerManager pm = (PowerManager) context.getSystemService(POWER_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                Intent intent = new Intent();
+                intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + "YOUR_PACKAGE_NAME"));
+                context.startActivity(intent);
+
+            }
+        }
     }
 
     @Override
@@ -223,9 +230,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void initializeUi() {
         youTubePlayerView = findViewById(R.id.youTubePlayerView);
-        //getLifecycle().addObserver(youTubePlayerView);
-        //youTubePlayerView.enableBackgroundPlayback(true);
-
         layout = findViewById(R.id.layoutMain);
         list = findViewById(R.id.list);
         icon = findViewById(R.id.icon);
