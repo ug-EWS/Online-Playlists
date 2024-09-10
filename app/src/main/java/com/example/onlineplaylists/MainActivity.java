@@ -1,5 +1,7 @@
 package com.example.onlineplaylists;
 
+import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
@@ -11,6 +13,8 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.hardware.SensorManager;
@@ -61,6 +65,7 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.utils.YouTube
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
 
 import java.io.File;
+import java.security.Permission;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Random;
@@ -86,14 +91,14 @@ public class MainActivity extends AppCompatActivity {
     private ImageView playButton;
     private ImageView forwardButton;
     private ConstraintLayout videoController;
-    private LinearLayout controls1;
-    private LinearLayout controls2;
     private ImageView videoReplay;
     private ImageView videoPlay;
     private ImageView videoForward;
     private TextView videoCurrent;
     private TextView videoLength;
     private SeekBar seekBar;
+    private ImageView openInYouTube;
+    private ImageView fullscreen;
 
     private ListOfPlaylists listOfPlaylists;
 
@@ -115,12 +120,13 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences sp;
     private SharedPreferences.Editor spe;
 
-    private boolean viewMode, isPortrait, isPlaying, cut, shuffle, musicMode, showController, serviceRunning, areControlsVisible;
+    private boolean viewMode, isPortrait, isFullscreen, isPlaying, cut, shuffle, musicMode, showController, serviceRunning, areControlsVisible;
 
     private final Context context = MainActivity.this;
     private PlaybackService playbackService;
 
     private Timer timer;
+    private Uri uri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -140,12 +146,19 @@ public class MainActivity extends AppCompatActivity {
         OnBackPressedCallback onBackPressedCallback = new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (!isPortrait && isPlaying) youTubePlayer.pause(); else if(viewMode) setViewMode(false); else finish();
+                if (isFullscreen) {
+                    isFullscreen = false;
+                    updateLayout();
+                } else if(viewMode) {
+                    setViewMode(false);
+                } else {
+                    finish();
+                }
             }
         };
         getOnBackPressedDispatcher().addCallback(onBackPressedCallback);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER);
         isPortrait = true;
+        isFullscreen = false;
         updateLayout();
     }
 
@@ -153,8 +166,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         Intent intent = getIntent();
-        if (Objects.equals(intent.getAction(), Intent.ACTION_VIEW) && intent.getData() != null)
-            importPlaylist(getIntent().getData());
+        if (Objects.equals(intent.getAction(), Intent.ACTION_VIEW) && intent.getData() != null) {
+            uri = getIntent().getData();
+            importPlaylist();
+        }
         checkBatteryOptimizationSettings();
     }
 
@@ -164,9 +179,8 @@ public class MainActivity extends AppCompatActivity {
             if (!pm.isIgnoringBatteryOptimizations(getPackageName())) {
                 Intent intent = new Intent();
                 intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-                intent.setData(Uri.parse("package:" + "YOUR_PACKAGE_NAME"));
+                intent.setData(Uri.parse("package:" + getPackageName()));
                 context.startActivity(intent);
-
             }
         }
     }
@@ -226,6 +240,7 @@ public class MainActivity extends AppCompatActivity {
         int cs = sp.getInt("currentSecond", 0);
         openPlaylist(cpi);
         playVideo(cvi, cs);
+        spe.putBoolean("serviceRunning", false);
     }
 
     private void initializeUi() {
@@ -298,7 +313,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onVideoLoadedFraction(@NonNull YouTubePlayer youTubePlayer, float loadedFraction) {
-                seekBar.setSecondaryProgress((int) (videoDuration / loadedFraction));
+                seekBar.setSecondaryProgress((int) (videoDuration * loadedFraction));
                 super.onVideoLoadedFraction(youTubePlayer, loadedFraction);
             }
         };
@@ -356,6 +371,14 @@ public class MainActivity extends AppCompatActivity {
             public void onStopTrackingTouch(SeekBar seekBar) {
                 youTubePlayer.seekTo(seekBar.getProgress());
             }
+        });
+        openInYouTube = mainView.findViewById(R.id.openInYoutube);
+        openInYouTube.setOnClickListener(v -> openVideoInYoutube(playingVideo));
+        fullscreen = mainView.findViewById(R.id.fullscreen);
+        fullscreen.setOnClickListener(v -> {
+            isFullscreen = !isFullscreen;
+            fullscreen.setImageResource(isFullscreen ? R.drawable.baseline_fullscreen_exit_24 : R.drawable.baseline_fullscreen_24);
+            updateLayout();
         });
     }
 
@@ -452,8 +475,7 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
             if (itemIndex == R.id.openInYouTube) {
-                Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(currentPlaylist.getVideoAt(index).getVideoUrl()));
-                startActivity(i);
+                openVideoInYoutube(currentPlaylist.getVideoAt(index));
                 return true;
             }
             if (itemIndex == R.id.delete) {
@@ -528,17 +550,31 @@ public class MainActivity extends AppCompatActivity {
                 .apply();
     }
 
-    private void importPlaylist(Uri uri) {
-        Log.d("PlaylistImporter", uri.toString());
-        try {
-            String filePath = uri.getPath();
-            if (filePath.startsWith("/document/primary:"))
-                filePath = filePath.replace("/document/primary:", "storage/emulated/0/");
-            Log.i("filePath", "importPlaylist: ".concat(filePath));
-            listOfPlaylists.addPlaylist(new Playlist().fromJson(OnlinePlaylistsUtils.readFile(filePath)));
-        } catch (Exception e) {
-            e.printStackTrace();
-            showMessage("Oynatma listesi içe aktarılamadı");
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 101) {
+            if (grantResults[0] == PERMISSION_GRANTED) {
+                importPlaylist();
+            } else {
+                showMessage("İzin olmadan oynatma listeleri içe aktarılamaz.");
+                finish();
+            }
+        }
+    }
+
+    private void importPlaylist() {
+        if (checkSelfPermission(READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED) {
+            String[] permissions = {READ_EXTERNAL_STORAGE};
+            requestPermissions(permissions, 101);
+        } else {
+            try {
+                String filePath = OnlinePlaylistsUtils.uriToPath(this, uri);
+                listOfPlaylists.addPlaylist(new Playlist().fromJson(OnlinePlaylistsUtils.readFile(filePath)));
+            } catch (Exception e) {
+                e.printStackTrace();
+                showMessage("Oynatma listesi içe aktarılamadı");
+            }
         }
     }
 
@@ -589,6 +625,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void openVideoInYoutube(YouTubeVideo video){
+        Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(video.getVideoUrl()));
+        startActivity(i);
+    }
+
     private void controllerPlayPause() {
         if (isPlaying) youTubePlayer.pause(); else youTubePlayer.play();
     }
@@ -625,12 +666,6 @@ public class MainActivity extends AppCompatActivity {
         Playlist toEdit;
         int whereToAdd;
         int selectedIcon;
-        Integer[] icons = {
-                R.drawable.baseline_featured_play_list_24,
-                R.drawable.baseline_favorite_24,
-                R.drawable.baseline_library_music_24,
-                R.drawable.baseline_videogame_asset_24,
-                R.drawable.baseline_movie_creation_24};
 
         PlaylistDialog(int _forPlaylist) {
 
@@ -663,7 +698,7 @@ public class MainActivity extends AppCompatActivity {
                 builder.setPositiveButton(getString(R.string.dialog_button_add), (dialog, which) -> {
                     String text = editText.getText().toString();
                     if (text.isEmpty()) text = editText.getHint().toString();
-                    listOfPlaylists.addPlaylistTo(new Playlist(text, icons[selectedIcon]), whereToAdd);
+                    listOfPlaylists.addPlaylistTo(new Playlist(text, selectedIcon), whereToAdd);
                     ListOfPlaylistsAdapter a = (ListOfPlaylistsAdapter) recycler.getAdapter();
                     a.insertItem(whereToAdd);
                     dialog.dismiss();
@@ -671,12 +706,13 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 toEdit = listOfPlaylists.getPlaylistAt(_forPlaylist);
                 editText.setText(toEdit.title);
-                selectedIcon = Arrays.asList(icons).indexOf(toEdit.icon);
+                selectedIcon = toEdit.icon;
+                if (selectedIcon > 4 || selectedIcon < 0) selectedIcon = 0;
                 iconSelector.getChildAt(selectedIcon).setBackgroundColor(getResources().getColor(R.color.soft_red));
                 builder.setPositiveButton(getString(R.string.dialog_button_apply), (dialog, which) -> {
                     String text = editText.getText().toString();
                     toEdit.title = text;
-                    toEdit.icon = icons[selectedIcon];
+                    toEdit.icon = selectedIcon;
                     recycler.getAdapter().notifyItemChanged(_forPlaylist);
                 });
             }
@@ -802,20 +838,18 @@ public class MainActivity extends AppCompatActivity {
     private void updateLayout() {
         musicController.setVisibility(showController && musicMode ? View.VISIBLE : View.GONE);
         youTubePlayerView.setVisibility(showController && !musicMode ? View.VISIBLE : View.GONE);
-        if (isPortrait || youTubePlayerView.getVisibility() == View.GONE) {
+        setRequestedOrientation(isFullscreen ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_USER);
+        list.setVisibility(isFullscreen ? View.GONE : View.VISIBLE);
+        if (isFullscreen) addButton.hide(); else addButton.show();
+        getWindow().getDecorView().setSystemUiVisibility(isFullscreen ? View.SYSTEM_UI_FLAG_FULLSCREEN : View.SYSTEM_UI_FLAG_VISIBLE);
+        if (isPortrait) {
             layout.setOrientation(LinearLayout.VERTICAL);
             OnlinePlaylistsUtils.setDimensions(context, youTubePlayerView, MATCH_PARENT, 240, 0);
             OnlinePlaylistsUtils.setDimensions(context, list, MATCH_PARENT, WRAP_CONTENT, 1);
-            list.setVisibility(View.VISIBLE);
-            addButton.show();
-            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
         } else {
             layout.setOrientation(LinearLayout.HORIZONTAL);
-            OnlinePlaylistsUtils.setDimensions(context, youTubePlayerView, isPlaying ? MATCH_PARENT : 480, MATCH_PARENT, 0);
+            OnlinePlaylistsUtils.setDimensions(context, youTubePlayerView, isFullscreen ? MATCH_PARENT : 480, MATCH_PARENT, 0);
             OnlinePlaylistsUtils.setDimensions(context, list, WRAP_CONTENT, MATCH_PARENT, 1);
-            list.setVisibility(isPlaying ? View.GONE : View.VISIBLE);
-            if (isPlaying) addButton.hide(); else addButton.show();
-            getWindow().getDecorView().setSystemUiVisibility(isPlaying ? View.SYSTEM_UI_FLAG_FULLSCREEN : View.SYSTEM_UI_FLAG_VISIBLE);
         }
     }
 
@@ -890,6 +924,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+        Integer[] icons = {
+                R.drawable.baseline_featured_play_list_24,
+                R.drawable.baseline_favorite_24,
+                R.drawable.baseline_library_music_24,
+                R.drawable.baseline_videogame_asset_24,
+                R.drawable.baseline_movie_creation_24};
+
         @NonNull
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -909,7 +950,9 @@ public class MainActivity extends AppCompatActivity {
 
             setItemOnClickListener(itemView, pos);
 
-            icon.setImageResource(listOfPlaylists.getPlaylistAt(pos).icon);
+            int iconIndex = listOfPlaylists.getPlaylistAt(pos).icon;
+            if (iconIndex > 4 || iconIndex < 0) iconIndex = 0;
+            icon.setImageResource(icons[iconIndex]);
             title.setText(listOfPlaylists.getPlaylistAt(pos).title);
             title.setTextColor(playingPlaylistIndex == pos ? Color.GREEN : Color.WHITE);
 
