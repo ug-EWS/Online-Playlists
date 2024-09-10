@@ -139,8 +139,8 @@
                     android:background="@drawable/ripple_on_dark_grey"
                     android:clickable="true"
                     android:padding="16dp"
-                    app:srcCompat="@drawable/baseline_more_vert_24"
-                    tools:srcCompat="@drawable/baseline_more_vert_24" />
+                    app:srcCompat="@drawable/baseline_settings_24"
+                    tools:srcCompat="@drawable/baseline_settings_24" />
 
             </LinearLayout>
 

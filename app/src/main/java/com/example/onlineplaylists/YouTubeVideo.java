@@ -5,15 +5,18 @@ import java.util.HashMap;
 public class YouTubeVideo {
     public String title;
     public String id;
+    public int musicStartSeconds;
 
     YouTubeVideo() {
         title = "";
         id = "";
+        musicStartSeconds = 0;
     }
 
     YouTubeVideo(String _title, String _id) {
         title = _title;
         id = _id;
+        musicStartSeconds = 0;
     }
 
     public YouTubeVideo fromJson(String _json) {

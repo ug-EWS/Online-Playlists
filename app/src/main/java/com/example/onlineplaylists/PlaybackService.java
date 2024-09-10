@@ -261,7 +261,7 @@ public class PlaybackService extends Service {
 
     private void changeVideo() {
         YouTubeVideo video = playlist.getVideoAt(currentVideoIndex);
-        youTubePlayer.loadVideo(video.id, 0);
+        youTubePlayer.loadVideo(video.id, video.musicStartSeconds);
         title = video.title;
         startForegroundService();
         spe.putInt("currentVideoIndex", currentVideoIndex).commit();

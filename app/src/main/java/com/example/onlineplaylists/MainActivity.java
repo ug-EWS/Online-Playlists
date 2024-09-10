@@ -1,6 +1,7 @@
 package com.example.onlineplaylists;
 
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+import static android.content.pm.PackageManager.PERMISSION_DENIED;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
@@ -159,6 +160,7 @@ public class MainActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(onBackPressedCallback);
         isPortrait = true;
         isFullscreen = false;
+        areControlsVisible = true;
         updateLayout();
     }
 
@@ -171,6 +173,10 @@ public class MainActivity extends AppCompatActivity {
             importPlaylist();
         }
         checkBatteryOptimizationSettings();
+        if (checkSelfPermission(READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED) {
+            String[] permissions = {READ_EXTERNAL_STORAGE};
+            requestPermissions(permissions, 101);
+        }
     }
 
     private void checkBatteryOptimizationSettings() {
@@ -182,6 +188,15 @@ public class MainActivity extends AppCompatActivity {
                 intent.setData(Uri.parse("package:" + getPackageName()));
                 context.startActivity(intent);
             }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 101) {
+            if (grantResults[0] == PERMISSION_DENIED)
+                showMessage("İzin olmadan oynatma listeleri içe aktarılamaz.");
         }
     }
 
@@ -266,9 +281,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onStateChange(@NonNull YouTubePlayer _youTubePlayer, @NonNull PlayerConstants.PlayerState state){
                 if (state == PlayerConstants.PlayerState.ENDED) {
-                    if (playMode == 1) playVideo(playingVideoIndex, 0);
-                    if (playMode == 2 && shuffle) playVideo(getRandomVideoIndex(), 0);
-                    if (playMode == 2 && !shuffle) playVideo(playingVideoIndex == currentPlaylist.getLength()-1 ? 0 : playingVideoIndex + 1, 0);
+                    if (playMode == 1) playVideo(playingVideoIndex);
+                    if (playMode == 2 && shuffle) playVideo(getRandomVideoIndex());
+                    if (playMode == 2 && !shuffle) playVideo(playingVideoIndex == currentPlaylist.getLength()-1 ? 0 : playingVideoIndex + 1);
                 } else {
                     boolean isPlayingNewValue = state == PlayerConstants.PlayerState.PLAYING;
                     if (isPlayingNewValue != isPlaying) {
@@ -373,7 +388,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         openInYouTube = mainView.findViewById(R.id.openInYoutube);
-        openInYouTube.setOnClickListener(v -> openVideoInYoutube(playingVideo));
+        openInYouTube.setOnClickListener(v -> {
+            playingVideo.musicStartSeconds = currentSecond;
+            showMessage(getString(R.string.music_start_point_set));
+        });
         fullscreen = mainView.findViewById(R.id.fullscreen);
         fullscreen.setOnClickListener(v -> {
             isFullscreen = !isFullscreen;
@@ -550,32 +568,14 @@ public class MainActivity extends AppCompatActivity {
                 .apply();
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 101) {
-            if (grantResults[0] == PERMISSION_GRANTED) {
-                importPlaylist();
-            } else {
-                showMessage("İzin olmadan oynatma listeleri içe aktarılamaz.");
-                finish();
-            }
-        }
-    }
-
     private void importPlaylist() {
-        if (checkSelfPermission(READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED) {
-            String[] permissions = {READ_EXTERNAL_STORAGE};
-            requestPermissions(permissions, 101);
-        } else {
             try {
-                String filePath = OnlinePlaylistsUtils.uriToPath(this, uri);
-                listOfPlaylists.addPlaylist(new Playlist().fromJson(OnlinePlaylistsUtils.readFile(filePath)));
+                listOfPlaylists.addPlaylist(new Playlist().fromJson(OnlinePlaylistsUtils.readFile(this, uri)));
+                showMessage(getString(R.string.import_success));
             } catch (Exception e) {
                 e.printStackTrace();
-                showMessage("Oynatma listesi içe aktarılamadı");
+                showMessage(getString(R.string.import_fail));
             }
-        }
     }
 
     private void sharePlaylist(Playlist playlist) {
@@ -606,6 +606,10 @@ public class MainActivity extends AppCompatActivity {
         setViewMode(true);
     }
 
+    private void playVideo(int index) {
+        playVideo(index, musicMode ? currentPlaylist.getVideoAt(index).musicStartSeconds : 0);
+    }
+
     private void playVideo(int index, int startSecond) {
         if (youTubePlayer == null) {
             showMessage(getString(R.string.player_not_ready));
@@ -615,7 +619,6 @@ public class MainActivity extends AppCompatActivity {
             playingPlaylist = currentPlaylist;
             playingVideoIndex = index;
             playingVideo = currentPlaylist.getVideoAt(index);
-            //YouTubePlayerUtils.loadOrCueVideo(youTubePlayer, getLifecycle(), playingVideo.id, startSecond);
             youTubePlayer.loadVideo(playingVideo.id, startSecond);
             musicTitle.setText(playingVideo.title);
             showController = true;
@@ -827,7 +830,7 @@ public class MainActivity extends AppCompatActivity {
         icon.setImageResource(viewMode ? R.drawable.baseline_arrow_back_24 : R.drawable.baseline_smart_display_24);
         icon.setClickable(viewMode);
         options.setVisibility(mode ? View.VISIBLE : View.GONE);
-        settings.setVisibility(mode ? View.GONE : View.VISIBLE);
+        //settings.setVisibility(mode ? View.GONE : View.VISIBLE);
     }
 
     private void setMusicMode(boolean _musicMode) {
@@ -919,7 +922,9 @@ public class MainActivity extends AppCompatActivity {
             this.notifyItemRangeChanged(index, listOfPlaylists.getLength()-index);
         }
         private void setItemOnClickListener(View v, int position) {
-            v.setOnClickListener(view -> playVideo(position, 0));
+            v.setOnClickListener(view -> {
+                if (!(currentPlaylistIndex == playingPlaylistIndex && position == playingVideoIndex))
+                    playVideo(position);});
         }
     }
 

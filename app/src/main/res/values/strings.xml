@@ -49,5 +49,10 @@
     <string name="cut_to_clipboard">Video was cut to paste.</string>
     <string name="copy_to_clipboard">Video was copied to paste.</string>
     <string name="player_not_ready">The player is not ready. Please try again later.</string>
+    <string name="pasted">Video pasted.</string>
+    <string name="import_success">Playlist imported.</string>
+    <string name="import_fail">Playlist import failed.</string>
+    <string name="music_start_point_set">Music start point has been set.</string>
+
 
 </resources>

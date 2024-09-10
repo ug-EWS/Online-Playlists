@@ -35,4 +35,8 @@
     <string name="music_mode">Müzik modu</string>
     <string name="import_playlist">Listeyi içe aktar</string>
     <string name="share">Paylaş</string>
+    <string name="pasted">Video yapıştırıldı.</string>
+    <string name="import_success">Oynatma listesi eklendi.</string>
+    <string name="import_fail">Oynatma listesi içe aktarılamadı.</string>
+    <string name="music_start_point_set">Müzik başlangıç noktası ayarlandı.</string>
 </resources>
