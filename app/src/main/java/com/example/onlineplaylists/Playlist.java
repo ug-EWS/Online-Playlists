@@ -2,6 +2,7 @@ package com.example.onlineplaylists;
 
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 
 public class Playlist {
@@ -11,13 +12,13 @@ public class Playlist {
 
     Playlist() {
         title = "";
-        icon = R.drawable.baseline_featured_play_list_24;
+        icon = 0;
         videos = new ArrayList<>();
     }
 
     Playlist(String _title) {
         title = _title;
-        icon = R.drawable.baseline_featured_play_list_24;
+        icon = 0;
         videos = new ArrayList<>();
     }
 
@@ -55,7 +56,7 @@ public class Playlist {
         videos.remove(index);
     }
 
-    public void moveVideo(int from, int to) {
+    public void moveVideoDep(int from, int to) {
         if (from == to) return;
         if (from < to) to--;
         YouTubeVideo videoToMove = videos.get(from);
@@ -63,8 +64,24 @@ public class Playlist {
         if (videos.isEmpty()) videos.add(videoToMove); else videos.add(to, videoToMove);
     }
 
+    public void moveVideo(int from, int to) {
+        if (from < to) {
+            for (int i = from; i < to; i++) {
+                Collections.swap(videos, i, i + 1);
+            }
+        } else {
+            for (int i = from; i > to; i--) {
+                Collections.swap(videos, i, i - 1);
+            }
+        }
+    }
+
     public YouTubeVideo getVideoAt(int index) {
         return videos.get(index);
+    }
+
+    public int getIndexOf(YouTubeVideo video) {
+        return videos.indexOf(video);
     }
 
     public int getLength() {

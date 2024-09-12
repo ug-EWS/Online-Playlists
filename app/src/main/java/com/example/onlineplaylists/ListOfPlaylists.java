@@ -1,6 +1,7 @@
 package com.example.onlineplaylists;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 
 public class ListOfPlaylists {
@@ -40,6 +41,10 @@ public class ListOfPlaylists {
         return playlists.get(index);
     }
 
+    public int getIndexOf(Playlist playlist) {
+        return playlists.indexOf(playlist);
+    }
+
     public String getJson() {
         ArrayList<String> list = new ArrayList<>();
         for (Playlist i : playlists) {
@@ -56,12 +61,24 @@ public class ListOfPlaylists {
         playlists.remove(index);
     }
 
-    public void movePlaylist(int from, int to) {
+    public void movePlaylistDep(int from, int to) {
         if (from == to) return;
         if (from < to) to--;
         Playlist playlistToMove = playlists.get(from);
         playlists.remove(from);
         if (playlists.isEmpty()) playlists.add(playlistToMove); else playlists.add(to, playlistToMove);
+    }
+
+    public void movePlaylist(int from, int to) {
+        if (from < to) {
+            for (int i = from; i < to; i++) {
+                Collections.swap(playlists, i, i + 1);
+            }
+        } else {
+            for (int i = from; i > to; i--) {
+                Collections.swap(playlists, i, i - 1);
+            }
+        }
     }
 
     public void moveVideo(int from, int video, int to, boolean cut) {

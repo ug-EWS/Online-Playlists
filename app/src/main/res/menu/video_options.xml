@@ -12,9 +12,6 @@
     </group>
     <group>
         <item
-            android:id="@+id/move"
-            android:title="@string/move" />
-        <item
             android:id="@+id/cut"
             android:title="@string/cut" />
         <item

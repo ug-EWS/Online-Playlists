@@ -97,7 +97,9 @@ public class PlaybackService extends Service {
                 if (state == PlayerConstants.PlayerState.ENDED) {
                     playOtherVideo();
                 } else {
+                    boolean isPlayingBeforeValue = isPlaying;
                     isPlaying = state == PlayerConstants.PlayerState.PLAYING;
+                    if(isPlaying != isPlayingBeforeValue) startForegroundService();
                 }
                 super.onStateChange(youTubePlayer, state);
             }
@@ -192,7 +194,7 @@ public class PlaybackService extends Service {
         views.setOnClickPendingIntent(R.id.previous, getIntentFor(ACTION_PREV));
         views.setOnClickPendingIntent(R.id.next, getIntentFor(ACTION_NEXT));
         views.setImageViewResource(R.id.icon, R.drawable.baseline_smart_display_24);
-        views.setImageViewResource(R.id.play, isPlaying ? R.drawable.baseline_play_arrow_24 : R.drawable.baseline_pause_24);
+        views.setImageViewResource(R.id.play, isPlaying ? R.drawable.baseline_pause_24 : R.drawable.baseline_play_arrow_24);
         views.setImageViewResource(R.id.off, R.drawable.baseline_stop_24);
         views.setImageViewResource(R.id.pause, R.drawable.baseline_forward_5_24);
         views.setImageViewResource(R.id.previous, R.drawable.baseline_skip_previous_24);
@@ -228,7 +230,6 @@ public class PlaybackService extends Service {
 
     private void play(){
         if (isPlaying) youTubePlayer.pause(); else youTubePlayer.play();
-        startForegroundService();
     }
 
     private void pause() {
