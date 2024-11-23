@@ -35,7 +35,7 @@ public class YouTubeVideo {
     }
 
     public String getThumbnailUrl() {
-        return "https://img.youtube.com/vi/".concat(id).concat("/default.jpg");
+        return "https://img.youtube.com/vi/".concat(id).concat("/maxresdefault.jpg");
     }
 
     public static String getVideoUrlFrom(String _id) {

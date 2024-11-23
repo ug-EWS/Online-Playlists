@@ -29,7 +29,30 @@
         android:checked="false"
         android:title="@string/music_mode"
         app:actionLayout="@layout/switch_item"
-        app:showAsAction="never" />
+        app:showAsAction="never" ></item>
+    <item
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:title="Otomatik kapanma">
+        <menu>
+            <group
+                android:checkableBehavior="single"
+                android:enabled="true">
+                <item
+                    android:id="@+id/autoDisabled"
+                    android:title="Devre dışı" />
+                <item
+                    android:id="@+id/auto10Min"
+                    android:title="10 dakika sonra" />
+                <item
+                    android:id="@+id/auto30Min"
+                    android:title="30 dakika sonra" />
+                <item
+                    android:id="@+id/auto1Hour"
+                    android:title="60 dakika sonra" />
+            </group>
+        </menu>
+    </item>
     <item
         android:id="@+id/about"
         android:title="@string/about" />

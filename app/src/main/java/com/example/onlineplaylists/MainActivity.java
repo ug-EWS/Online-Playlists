@@ -20,18 +20,26 @@ import android.os.PowerManager;
 import android.os.Vibrator;
 import android.os.VibratorManager;
 import android.provider.Settings;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
@@ -43,6 +51,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
+import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -53,14 +62,19 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.FullscreenListener;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import kotlin.Unit;
+import kotlin.jvm.functions.Function0;
 
 public class MainActivity extends AppCompatActivity {
     private YouTubePlayer youTubePlayer;
@@ -90,6 +104,17 @@ public class MainActivity extends AppCompatActivity {
     private SeekBar seekBar;
     private ImageView openInYouTube;
     private ImageView fullscreen;
+    private LinearLayout controls1;
+    private LinearLayout controls2;
+    private ImageView speed;
+    private LinearLayout bottomMainControls;
+    private LinearLayout speedControls;
+    private ImageView speedBack;
+    private TextView speedText;
+    private SeekBar speedBar;
+    private ImageView videoPrevious;
+    private ImageView videoNext;
+
 
     private ListOfPlaylistsAdapter listOfPlaylistsAdapter;
     private PlaylistAdapter playlistAdapter;
@@ -106,7 +131,8 @@ public class MainActivity extends AppCompatActivity {
             cutVideoIndex = -1,
             playMode = 0,
             currentSecond = 0,
-            videoDuration = 0;
+            videoDuration = 0,
+            autoShutDown = 0;
 
     private PlaylistDialog playlistDialog;
     private VideoDialog videoDialog;
@@ -114,14 +140,34 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences sp;
     private SharedPreferences.Editor spe;
 
-    private boolean viewMode, isPortrait, isFullscreen, isPlaying, cut, shuffle, musicMode, showController, serviceRunning, areControlsVisible;
+    private boolean viewMode;
+    private boolean isPortrait;
+    private boolean isFullscreen;
+    private boolean isPlaying;
+    private boolean cut;
+    private boolean shuffle;
+    private boolean musicMode;
+    private boolean showController;
+    private boolean serviceRunning;
+    private boolean areControlsVisible;
+    private boolean showThumbnails;
+    private boolean musicControlsMode;
+
+    private ArrayList<Integer> playlistIndexes;
 
     private final Context context = MainActivity.this;
-    private PlaybackService playbackService;
 
     private Timer timer;
     private Uri uri;
     Vibrator vibrator;
+
+    private PlayerConstants.PlaybackRate[] speeds = {
+            PlayerConstants.PlaybackRate.RATE_0_25,
+            PlayerConstants.PlaybackRate.RATE_0_5,
+            PlayerConstants.PlaybackRate.RATE_1,
+            PlayerConstants.PlaybackRate.RATE_1_5,
+            PlayerConstants.PlaybackRate.RATE_2};
+    private String[] speedStrings = {"0.25x", "0.5x", "1.0x", "1.5x", "2.0x"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -134,9 +180,14 @@ public class MainActivity extends AppCompatActivity {
         playMode = sp.getInt("playMode", 2);
         shuffle = sp.getBoolean("shuffle", false);
         musicMode = sp.getBoolean("musicMode", false);
+        autoShutDown = sp.getInt("autoShutDown", 0);
+        musicControlsMode = sp.getBoolean("musicControlsMode", false);
 
         playlistDialog = new PlaylistDialog(-1);
         videoDialog = new VideoDialog();
+
+        playlistIndexes = new ArrayList<>();
+
         initializeUi();
         OnBackPressedCallback onBackPressedCallback = new OnBackPressedCallback(true) {
             @Override
@@ -144,6 +195,7 @@ public class MainActivity extends AppCompatActivity {
                 if (isFullscreen) {
                     isFullscreen = false;
                     updateLayout();
+                    fullscreen.setImageResource(R.drawable.baseline_fullscreen_24);
                 } else if(viewMode) {
                     setViewMode(false);
                 } else {
@@ -164,14 +216,12 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
         Intent intent = getIntent();
         if (Objects.equals(intent.getAction(), Intent.ACTION_VIEW) && intent.getData() != null) {
-            uri = getIntent().getData();
-            importPlaylist();
+            if (checkSelfPermission(READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED) {
+                String[] permissions = {READ_EXTERNAL_STORAGE};
+                requestPermissions(permissions, 101);
+            }
         }
         checkBatteryOptimizationSettings();
-        if (checkSelfPermission(READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED) {
-            String[] permissions = {READ_EXTERNAL_STORAGE};
-            requestPermissions(permissions, 101);
-        }
     }
 
     private void checkBatteryOptimizationSettings() {
@@ -188,8 +238,12 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 101) {
-            if (grantResults[0] == PERMISSION_DENIED)
+            if (grantResults[0] == PERMISSION_DENIED) {
                 showMessage("İzin olmadan oynatma listeleri içe aktarılamaz.");
+            } else {
+                uri = getIntent().getData();
+                importPlaylist();
+            }
         }
     }
 
@@ -215,7 +269,6 @@ public class MainActivity extends AppCompatActivity {
         if (playingVideoIndex != -1 && isPlaying) {
             youTubePlayer.pause();
             startPlaybackService();
-
         }
         super.onPause();
     }
@@ -246,8 +299,8 @@ public class MainActivity extends AppCompatActivity {
         int cpi = sp.getInt("currentPlaylistIndex", 0);
         int cvi = sp.getInt("currentVideoIndex", 0);
         int cs = sp.getInt("currentSecond", 0);
-        openPlaylist(cpi);
-        playVideo(cvi, cs);
+        openPlaylist(cpi, cvi);
+        playVideo(cvi, cs, true);
         spe.putBoolean("serviceRunning", false);
     }
 
@@ -260,7 +313,6 @@ public class MainActivity extends AppCompatActivity {
         addButton = findViewById(R.id.addButton);
         options = findViewById(R.id.options);
         settings = findViewById(R.id.settings);
-        //
         listOfPlaylistsRecycler = findViewById(R.id.listOfPlaylistsRecycler);
         listOfPlaylistsRecycler.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         listOfPlaylistsAdapter = new ListOfPlaylistsAdapter();
@@ -278,11 +330,11 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onStateChange(@NonNull YouTubePlayer _youTubePlayer, @NonNull PlayerConstants.PlayerState state){
+            public void onStateChange(@NonNull YouTubePlayer _youTubePlayer, @NonNull PlayerConstants.PlayerState state) {
                 if (state == PlayerConstants.PlayerState.ENDED) {
-                    if (playMode == 1) playVideo(playingVideoIndex);
-                    if (playMode == 2 && shuffle) playVideo(getRandomVideoIndex());
-                    if (playMode == 2 && !shuffle) playVideo(playingVideoIndex == currentPlaylist.getLength()-1 ? 0 : playingVideoIndex + 1);
+                    if (playMode == 1) playVideo(playingVideoIndex, false);
+                    if (playMode == 2 && shuffle) playRandom();
+                    if (playMode == 2 && !shuffle) playNext();
                 } else {
                     boolean isPlayingNewValue = state == PlayerConstants.PlayerState.PLAYING;
                     if (isPlayingNewValue != isPlaying) {
@@ -290,16 +342,13 @@ public class MainActivity extends AppCompatActivity {
                         playButton.setImageResource(isPlaying ? R.drawable.baseline_pause_24 : R.drawable.baseline_play_arrow_24);
                         videoPlay.setImageResource(isPlaying ? R.drawable.baseline_pause_24 : R.drawable.baseline_play_arrow_24);
                         updateLayout();
-                        if(isPlaying) {
+                        if (isPlaying) {
                         timer = new Timer();
                         timer.schedule(new TimerTask() {
                             @Override
                             public void run() {
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        if (areControlsVisible) videoController.performClick();
-                                    }
+                                runOnUiThread(() -> {
+                                    if (areControlsVisible) videoController.performClick();
                                 });
                             }
                         }, 600);
@@ -358,12 +407,19 @@ public class MainActivity extends AppCompatActivity {
         videoController.setOnClickListener(v -> {
             areControlsVisible = !areControlsVisible;
             videoController.animate().alpha(areControlsVisible ? 1 : 0);
+
             videoReplay.setClickable(areControlsVisible);
             videoPlay.setClickable(areControlsVisible);
             videoForward.setClickable(areControlsVisible);
             openInYouTube.setClickable(areControlsVisible);
             fullscreen.setClickable(areControlsVisible);
+            speed.setClickable(areControlsVisible);
+            speedBack.setClickable(areControlsVisible);
+            videoPrevious.setClickable(areControlsVisible);
+            videoNext.setClickable(areControlsVisible);
+
             seekBar.setEnabled(areControlsVisible);
+            speedBar.setEnabled(areControlsVisible);
         });
         videoReplay = mainView.findViewById(R.id.replay);
         videoReplay.setOnClickListener(v -> controllerReplay());
@@ -399,6 +455,43 @@ public class MainActivity extends AppCompatActivity {
             fullscreen.setImageResource(isFullscreen ? R.drawable.baseline_fullscreen_exit_24 : R.drawable.baseline_fullscreen_24);
             updateLayout();
         });
+        videoPrevious = mainView.findViewById(R.id.previous);
+        videoPrevious.setOnClickListener(v -> playPrevious());
+        videoNext = mainView.findViewById(R.id.next);
+        videoNext.setOnClickListener(v -> playNext());
+        controls1 = mainView.findViewById(R.id.controls1);
+        controls2 = mainView.findViewById(R.id.controls2);
+        speed = mainView.findViewById(R.id.speed);
+        speed.setOnClickListener(v -> {
+            bottomMainControls.setVisibility(View.GONE);
+            speedControls.setVisibility(View.VISIBLE);
+        });
+        bottomMainControls = mainView.findViewById(R.id.bottomMainControls);
+        speedControls = mainView.findViewById(R.id.speedControls);
+        speedBack = mainView.findViewById(R.id.speedBack);
+        speedBack.setOnClickListener(v -> {
+            bottomMainControls.setVisibility(View.VISIBLE);
+            speedControls.setVisibility(View.GONE);
+        });
+        speedText = mainView.findViewById(R.id.speedText);
+        speedBar = mainView.findViewById(R.id.speedBar);
+        speedBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                youTubePlayer.setPlaybackRate(speeds[progress]);
+                speedText.setText(speedStrings[progress]);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
     }
 
     private @NonNull PopupMenu getPlaylistPopupMenu(View anchor, boolean current, int index) {
@@ -421,6 +514,8 @@ public class MainActivity extends AppCompatActivity {
                         closePlayer();
                     }
                     listOfPlaylists.moveVideo(cutPlaylistIndex, cutVideoIndex, index, cut);
+                    listOfPlaylistsAdapter.notifyItemChanged(cutPlaylistIndex);
+                    listOfPlaylistsAdapter.notifyItemChanged(index);
                     cutPlaylistIndex = -1;
                     cutPlaylist = null;
                     cutVideoIndex = -1;
@@ -429,6 +524,8 @@ public class MainActivity extends AppCompatActivity {
                     if (current) {
                         playlistAdapter.insertItem(0);
                     }
+
+                    showMessage("Yapıştırıldı");
                 }
                 return true;
             }
@@ -520,6 +617,10 @@ public class MainActivity extends AppCompatActivity {
         if (playMode == 0) menu.findItem(R.id.doNothing).setChecked(true);
         if (playMode == 1) menu.findItem(R.id.replayButton).setChecked(true);
         if (playMode == 2) menu.findItem(R.id.playNextVideo).setChecked(true);
+        if (autoShutDown == 0) menu.findItem(R.id.autoDisabled).setChecked(true);
+        if (autoShutDown == 1) menu.findItem(R.id.auto10Min).setChecked(true);
+        if (autoShutDown == 2) menu.findItem(R.id.auto30Min).setChecked(true);
+        if (autoShutDown == 3) menu.findItem(R.id.auto1Hour).setChecked(true);
         menu.findItem(R.id.shuffleMode).setChecked(shuffle);
         menu.findItem(R.id.musicMode).setChecked(musicMode);
         popupMenu.setOnMenuItemClickListener(item -> {
@@ -551,6 +652,27 @@ public class MainActivity extends AppCompatActivity {
                 updateLayout();
                 return false;
             }
+            if (itemIndex == R.id.autoDisabled) {
+                autoShutDown = 0;
+                item.setChecked(true);
+                return false;
+            }
+            if (itemIndex == R.id.auto10Min) {
+                autoShutDown = 1;
+                item.setChecked(true);
+                return false;
+            }
+            if (itemIndex == R.id.auto30Min) {
+                autoShutDown = 2;
+                item.setChecked(true);
+                return false;
+            }
+            if (itemIndex == R.id.auto1Hour) {
+                autoShutDown = 3;
+                item.setChecked(true);
+                return false;
+            }
+
             if (itemIndex == R.id.about) {
                 return true;
             }
@@ -564,6 +686,8 @@ public class MainActivity extends AppCompatActivity {
                 .putInt("playMode", playMode)
                 .putBoolean("shuffle", shuffle)
                 .putBoolean("musicMode", musicMode)
+                .putInt("autoShutDown", autoShutDown)
+                .putBoolean("musicControlsMode", musicControlsMode)
                 .apply();
     }
 
@@ -596,6 +720,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void openPlaylist(int index) {
+        openPlaylist(index, 0);
+    }
+
+    private void openPlaylist(int index, int scroll) {
         currentPlaylistIndex = index;
         currentPlaylist = listOfPlaylists.getPlaylistAt(index);
         PopupMenu currentPlaylistOptions = getPlaylistPopupMenu(options, true, currentPlaylistIndex);
@@ -604,27 +732,39 @@ public class MainActivity extends AppCompatActivity {
             currentPlaylistOptions.show();
         });
         setViewMode(true);
+        playlistRecycler.scrollToPosition(scroll);
     }
 
-    private void playVideo(int index) {
-        playVideo(index, musicMode ? currentPlaylist.getVideoAt(index).musicStartSeconds : 0);
+    private void playVideo(int index, boolean switchPlaylist) {
+        playVideo(index, musicMode ? currentPlaylist.getVideoAt(index).musicStartSeconds : 0, switchPlaylist);
     }
 
-    private void playVideo(int index, int startSecond) {
+    private void playVideo(int index, int startSecond, boolean switchPlaylist) {
         if (youTubePlayer == null) {
             showMessage(getString(R.string.player_not_ready));
         } else {
+            if (!switchPlaylist && playingPlaylistIndex == currentPlaylistIndex) switchPlaylist = true;
+
             int oldPosition = playingVideoIndex;
-            playingPlaylistIndex = currentPlaylistIndex;
-            playingPlaylist = currentPlaylist;
+
+            playlistIndexes.remove((Integer) index);
+
+            if (switchPlaylist) {
+                playingPlaylistIndex = currentPlaylistIndex;
+                playingPlaylist = currentPlaylist;
+            }
+
             playingVideoIndex = index;
-            playingVideo = currentPlaylist.getVideoAt(index);
+            playingVideo = playingPlaylist.getVideoAt(index);
             youTubePlayer.loadVideo(playingVideo.id, startSecond);
             musicTitle.setText(playingVideo.title);
             showController = true;
             updateLayout();
-            if (oldPosition != -1) playlistRecycler.getAdapter().notifyItemChanged(oldPosition);
-            playlistRecycler.getAdapter().notifyItemChanged(index);
+
+            if (switchPlaylist) {
+                if (oldPosition != -1) playlistRecycler.getAdapter().notifyItemChanged(oldPosition);
+                playlistRecycler.getAdapter().notifyItemChanged(index);
+            }
         }
     }
 
@@ -645,12 +785,20 @@ public class MainActivity extends AppCompatActivity {
         youTubePlayer.seekTo(currentSecond + 5);
     }
 
-    private int getRandomVideoIndex() {
-        int i;
-        do {
-            i = new Random().nextInt(playingPlaylist.getLength());
-        } while (i == playingVideoIndex);
-        return i;
+    private void playPrevious() {
+        int index = playingVideoIndex == 0 ? currentPlaylist.getLength()-1 : playingVideoIndex - 1;
+        playVideo(index, false);
+    }
+
+    private void playNext() {
+        int index = playingVideoIndex == currentPlaylist.getLength()-1 ? 0 : playingVideoIndex + 1;
+        playVideo(index, false);
+    }
+
+    private void playRandom() {
+        if (playlistIndexes.isEmpty()) for (int i = 0; i < currentPlaylist.getLength(); i++) playlistIndexes.add(i);
+        int index = playlistIndexes.get(new Random().nextInt(playlistIndexes.size()));
+        playVideo(index, false);
     }
 
     private void closePlayer() {
@@ -679,10 +827,10 @@ public class MainActivity extends AppCompatActivity {
             View.OnClickListener onClickListener = view -> {
                 selectedIcon = iconSelector.indexOfChild(view);
                 for (int i = 0; i < 5; i++) {
-                    iconSelector.getChildAt(i).setBackgroundColor(i == selectedIcon ? getResources().getColor(R.color.soft_red): Color.TRANSPARENT);
+                    iconSelector.getChildAt(i).setBackgroundColor(i == selectedIcon ? getResources().getColor(R.color.soft_red, getTheme()): Color.TRANSPARENT);
                 }
             };
-            for (int i = 0; i < 5; i++){
+            for (int i = 0; i < 5; i++) {
                 iconSelector.getChildAt(i).setOnClickListener(onClickListener);
             }
             builder.setNegativeButton(getString(R.string.dialog_button_cancel), (dialog, which) -> dialog.dismiss());
@@ -696,8 +844,8 @@ public class MainActivity extends AppCompatActivity {
             });
             boolean _newPlaylist = _forPlaylist == -1;
             builder.setTitle(getString(_newPlaylist ? R.string.add_playlist : R.string.edit_playlist));
-            if(_newPlaylist) {
-                iconSelector.getChildAt(0).setBackgroundColor(getResources().getColor(R.color.soft_red));
+            if (_newPlaylist) {
+                iconSelector.getChildAt(0).setBackgroundColor(getResources().getColor(R.color.soft_red, getTheme()));
                 builder.setPositiveButton(getString(R.string.dialog_button_add), (dialog, which) -> {
                     String text = editText.getText().toString();
                     if (text.isEmpty()) text = editText.getHint().toString();
@@ -710,7 +858,7 @@ public class MainActivity extends AppCompatActivity {
                 editText.setText(toEdit.title);
                 selectedIcon = toEdit.icon;
                 if (selectedIcon > 4 || selectedIcon < 0) selectedIcon = 0;
-                iconSelector.getChildAt(selectedIcon).setBackgroundColor(getResources().getColor(R.color.soft_red));
+                iconSelector.getChildAt(selectedIcon).setBackgroundColor(getResources().getColor(R.color.soft_red, getTheme()));
                 builder.setPositiveButton(getString(R.string.dialog_button_apply), (dialog, which) -> {
                     String text = editText.getText().toString();
                     toEdit.title = text;
@@ -744,6 +892,7 @@ public class MainActivity extends AppCompatActivity {
         ImageView backButton;
         ImageView refreshButton;
         ImageView forwardButton;
+        ImageButton searchButton;
         int whereToAdd;
 
         @SuppressLint("SetJavaScriptEnabled")
@@ -760,6 +909,7 @@ public class MainActivity extends AppCompatActivity {
             backButton = dialogView.findViewById(R.id.webBackButton);
             refreshButton = dialogView.findViewById(R.id.webRefreshButton);
             forwardButton = dialogView.findViewById(R.id.webForwardButton);
+            searchButton = dialogView.findViewById(R.id.searchButton);
 
             webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
             webView.getSettings().setJavaScriptEnabled(true);
@@ -782,10 +932,10 @@ public class MainActivity extends AppCompatActivity {
                 currentPlaylist.addVideoTo(new YouTubeVideo(title, id), whereToAdd);
                 PlaylistAdapter a = (PlaylistAdapter) playlistRecycler.getAdapter();
                 a.insertItem(whereToAdd);
-                dialog.dismiss();
+                dismiss();
             });
 
-            cancelButton.setOnClickListener(view -> dialog.dismiss());
+            cancelButton.setOnClickListener(view -> dismiss());
 
             backButton.setOnClickListener(view -> webView.goBack());
 
@@ -793,18 +943,28 @@ public class MainActivity extends AppCompatActivity {
 
             forwardButton.setOnClickListener(view -> webView.goForward());
 
+            editText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    searchButton.setVisibility(s.toString().isEmpty() ? View.GONE : View.VISIBLE);
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+
+                }
+            });
+
+            searchButton.setOnClickListener(v -> search());
+
             editText.setOnEditorActionListener((v, actionId, event) -> {
                 if (actionId == EditorInfo.IME_ACTION_GO) {
-                    String text = editText.getText().toString();
-                    if (text.contains("/watch?") && text.indexOf("http") == 0) {
-                        webView.loadUrl(text);
-                    }
-                    else if (text.length() == 11) {
-                        webView.loadUrl("https://m.youtube.com/watch?v=".concat(text));
-                    }
-                    else {
-                        webView.loadUrl("https://m.youtube.com/results?search_query=".concat(text));
-                    }
+                    search();
                     return true;
                 }
                 return false;
@@ -815,8 +975,35 @@ public class MainActivity extends AppCompatActivity {
         }
         public void show(int _whereToAdd) {
             whereToAdd = _whereToAdd;
+            webView.onResume();
+            //webView.resumeTimers();
+            webView.reload();
             dialog.show();
-            webView.loadUrl("https://www.youtube.com");
+        }
+
+        private void dismiss() {
+            webView.setEnabled(false);
+            webView.onPause();
+            //webView.pauseTimers();
+            webView.reload();
+            dialog.dismiss();
+        }
+
+        private void search() {
+            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(editText.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
+            String text = editText.getText().toString();
+            if (text.contains("/watch?") && text.indexOf("http") == 0) {
+                webView.loadUrl(text);
+            }
+            else if (text.length() == 11) {
+                webView.loadUrl("https://m.youtube.com/watch?v=".concat(text));
+            }
+            else {
+                webView.loadUrl("https://m.youtube.com/results?search_query=".concat(text));
+            }
+            webView.setVisibility(View.VISIBLE);
+            refreshButton.setVisibility(View.VISIBLE);
         }
     }
     private void showMessage(String text) {
@@ -851,16 +1038,27 @@ public class MainActivity extends AppCompatActivity {
         youTubePlayerView.setVisibility(showController && !musicMode ? View.VISIBLE : View.GONE);
         setRequestedOrientation(isFullscreen ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_USER);
         list.setVisibility(isFullscreen ? View.GONE : View.VISIBLE);
-        if (isFullscreen) addButton.hide(); else addButton.show();
         getWindow().getDecorView().setSystemUiVisibility(isFullscreen ? View.SYSTEM_UI_FLAG_FULLSCREEN : View.SYSTEM_UI_FLAG_VISIBLE);
+        if (isFullscreen) {
+            addButton.hide();
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        } else {
+            addButton.show();
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }
         if (isPortrait) {
             layout.setOrientation(LinearLayout.VERTICAL);
             OnlinePlaylistsUtils.setDimensions(context, youTubePlayerView, MATCH_PARENT, 240, 0);
             OnlinePlaylistsUtils.setDimensions(context, list, MATCH_PARENT, WRAP_CONTENT, 1);
         } else {
-            layout.setOrientation(LinearLayout.HORIZONTAL);
+            layout.setOrientation(musicMode ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
             OnlinePlaylistsUtils.setDimensions(context, youTubePlayerView, isFullscreen ? MATCH_PARENT : 480, MATCH_PARENT, 0);
-            OnlinePlaylistsUtils.setDimensions(context, list, WRAP_CONTENT, MATCH_PARENT, 1);
+            OnlinePlaylistsUtils.setDimensions(context, list, musicMode ? MATCH_PARENT : WRAP_CONTENT, MATCH_PARENT, 1);
+        }
+        boolean showThumbnailsNewValue = !(!isPortrait && showController && !musicMode);
+        if (showThumbnails != showThumbnailsNewValue) {
+            showThumbnails = showThumbnailsNewValue;
+            if (viewMode) playlistRecycler.getAdapter().notifyDataSetChanged();
         }
     }
 
@@ -881,12 +1079,19 @@ public class MainActivity extends AppCompatActivity {
             ImageView thumbnail = itemView.findViewById(R.id.videoThumbnail);
             TextView title = itemView.findViewById(R.id.videoTitle);
             ImageView options = itemView.findViewById(R.id.videoOptions);
+            CardView card = itemView.findViewById(R.id.card);
 
             setItemOnClickListener(itemView, pos);
+
+            itemView.setBackgroundResource(currentPlaylistIndex == playingPlaylistIndex && playingVideoIndex == pos
+                    ? R.drawable.list_item_playing
+                    : R.drawable.list_item);
+
             YouTubeVideo thisVideo = currentPlaylist.getVideoAt(pos);
             title.setText(thisVideo.title);
             title.setTextColor(currentPlaylistIndex == playingPlaylistIndex && playingVideoIndex == pos ? Color.GREEN : Color.WHITE);
             Glide.with(MainActivity.this).load(thisVideo.getThumbnailUrl()).into(thumbnail);
+            card.setVisibility(showThumbnails ? View.VISIBLE : View.GONE);
 
             PopupMenu popupMenu = getVideoPopupMenu(options, pos);
             options.setOnClickListener(view -> popupMenu.show());
@@ -897,7 +1102,7 @@ public class MainActivity extends AppCompatActivity {
             return currentPlaylist.getLength();
         }
         public void insertItem(int index) {
-            if(playingVideoIndex != -1 && index <= playingVideoIndex && currentPlaylistIndex == playingPlaylistIndex) {
+            if (playingVideoIndex != -1 && index <= playingVideoIndex && currentPlaylistIndex == playingPlaylistIndex) {
                 playingVideoIndex++;
                 playingVideo = currentPlaylist.getVideoAt(playingVideoIndex);
             }
@@ -908,15 +1113,15 @@ public class MainActivity extends AppCompatActivity {
             this.notifyItemRangeChanged(index, listOfPlaylists.getLength()-index);
         }
         public void removeItem(int index) {
-            if(playingVideo != null && currentPlaylistIndex == playingPlaylistIndex) {
-                if(index < playingVideoIndex) {
+            if (playingVideo != null && currentPlaylistIndex == playingPlaylistIndex) {
+                if (index < playingVideoIndex) {
                     playingVideoIndex = currentPlaylist.getIndexOf(playingVideo);
                 }
-                if(index == playingVideoIndex) {
+                if (index == playingVideoIndex) {
                     closePlayer();
                 }
             }
-            if(cutVideo != null && currentPlaylistIndex == cutPlaylistIndex) {
+            if (cutVideo != null && currentPlaylistIndex == cutPlaylistIndex) {
                 if (index < cutVideoIndex) {
                     cutVideoIndex = currentPlaylist.getIndexOf(cutVideo);
                 }
@@ -930,8 +1135,9 @@ public class MainActivity extends AppCompatActivity {
         }
         private void setItemOnClickListener(View v, int position) {
             v.setOnClickListener(view -> {
-                if (!(currentPlaylistIndex == playingPlaylistIndex && position == playingVideoIndex))
-                    playVideo(position);});
+                if ((currentPlaylistIndex == playingPlaylistIndex && position == playingVideoIndex))
+                    if (isPlaying) youTubePlayer.pause(); else youTubePlayer.play();
+                    else playVideo(position, true);});
         }
 
         @Override
@@ -983,16 +1189,21 @@ public class MainActivity extends AppCompatActivity {
             View itemView = holder.itemView;
             int pos = holder.getAdapterPosition();
 
+            LinearLayout layout = itemView.findViewById(R.id.layout);
             ImageView icon = itemView.findViewById(R.id.playlistIcon);
             TextView title = itemView.findViewById(R.id.playlistTitle);
+            TextView size = itemView.findViewById(R.id.playlistSize);
             ImageView options = itemView.findViewById(R.id.playlistOptions);
 
-            setItemOnClickListener(itemView, pos);
+            setItemOnClickListener(layout, pos);
+
+            layout.setBackgroundResource(playingPlaylistIndex == pos ? R.drawable.list_item_playing : R.drawable.list_item);
 
             int iconIndex = listOfPlaylists.getPlaylistAt(pos).icon;
             if (iconIndex > 4 || iconIndex < 0) iconIndex = 0;
             icon.setImageResource(icons[iconIndex]);
             title.setText(listOfPlaylists.getPlaylistAt(pos).title);
+            size.setText(String.valueOf(listOfPlaylists.getPlaylistAt(pos).getLength()).concat(" video"));
             title.setTextColor(playingPlaylistIndex == pos ? Color.GREEN : Color.WHITE);
 
             PopupMenu popupMenu = getPlaylistPopupMenu(options, false, pos);
@@ -1028,7 +1239,7 @@ public class MainActivity extends AppCompatActivity {
                     playingPlaylist = null;
                }
             }
-            if(cutPlaylist != null) {
+            if (cutPlaylist != null) {
                 if (index < cutPlaylistIndex) {
                     cutPlaylistIndex = listOfPlaylists.getIndexOf(cutPlaylist);
                 }
@@ -1063,7 +1274,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onRowSelected(RecyclerView.ViewHolder viewHolder) {
-            vibrator.vibrate(500);
+            vibrator.vibrate(50);
         }
 
         @Override

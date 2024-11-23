@@ -1,5 +1,7 @@
 package com.example.onlineplaylists;
 
+import static android.media.MediaPlayer.MetricsConstants.PLAYING;
+
 import android.app.ActivityManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -10,11 +12,19 @@ import android.content.ComponentCallbacks;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
+import android.graphics.Color;
+import android.graphics.drawable.Icon;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
+import android.media.MediaMetadata;
+import android.media.MediaSyncEvent;
+import android.media.session.MediaSession;
+import android.media.session.MediaSessionManager;
+import android.media.session.PlaybackState;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.RemoteViews;
@@ -23,13 +33,17 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import com.bumptech.glide.Glide;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Random;
+import java.util.Timer;
 
 import javax.security.auth.callback.Callback;
 
@@ -47,15 +61,16 @@ public class PlaybackService extends Service {
     private final IBinder binder = new ServiceBinder();
 
     private NotificationManager notificationManager;
+    private MediaSession mediaSession;
+    private MediaMetadata.Builder mediaMetadata;
     private YouTubePlayerView youTubePlayerView;
     private YouTubePlayer youTubePlayer;
-    private RemoteViews remoteViews;
+    private Handler handler;
 
     private SharedPreferences sp;
     private SharedPreferences.Editor spe;
 
     private Playlist playlist;
-    private int currentPlaylistIndex;
     private int currentVideoIndex;
     private int currentSecond;
     private boolean isPlaying = false;
@@ -63,25 +78,28 @@ public class PlaybackService extends Service {
     private boolean isStarting = false;
     private boolean isReady = false;
     private String title = "Online Playlists";
+    private ArrayList<Integer> playlistIndexes;
+    private int autoShutDown;
+    private int[] autoShutDownMillis = {0, 10000, 1800000, 3600000};
 
     @Override
     public void onCreate() {
         Log.i("start", "Service created");
         notificationManager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel("def", "Playback", NotificationManager.IMPORTANCE_HIGH);
+            NotificationChannel channel = new NotificationChannel("def", "Playback", NotificationManager.IMPORTANCE_LOW);
             channel.enableVibration(false);
-            Uri uri = Uri.parse(("android.resource://" + getApplicationContext().getPackageName() + "/" + R.raw.silent));
-            AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                    .build();
-            channel.setSound(uri, audioAttributes);
+            channel.setSound(null, null);
             channel.enableLights(false);
             notificationManager.createNotificationChannel(channel);
         }
+        mediaSession = new MediaSession(this, "Online Playlists");
+        mediaMetadata = new MediaMetadata.Builder();
+        mediaMetadata.putLong(MediaMetadata.METADATA_KEY_DURATION, -1L);
+        mediaSession.setMetadata(mediaMetadata.build());
         sp = getSharedPreferences("OnlinePlaylists", MODE_PRIVATE);
         spe = sp.edit();
+        playlistIndexes = new ArrayList<>();
         youTubePlayerView = new YouTubePlayerView(this);
         youTubePlayerView.addYouTubePlayerListener(new AbstractYouTubePlayerListener() {
             @Override
@@ -110,15 +128,28 @@ public class PlaybackService extends Service {
                 spe.putInt("currentSecond", currentSecond).commit();
                 super.onCurrentSecond(youTubePlayer, second);
             }
+
+            @Override
+            public void onVideoDuration(@NonNull YouTubePlayer youTubePlayer, float duration) {
+                super.onVideoDuration(youTubePlayer, duration);
+            }
         });
+        handler = new Handler(getMainLooper());
     }
 
     private void startForegroundService() {
         if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(R.string.app_name, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            startForeground(R.string.app_name, getNotification2(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
         } else {
-            startForeground(R.string.app_name, getNotification());
+            startForeground(R.string.app_name, getNotification2());
         }
+    }
+
+    private void startTimer(boolean delayed) {
+        handler.postDelayed(() -> {
+            notificationManager.notify(102, getTimeoutNotification());
+            handler.postDelayed(this::stopSelf, 10000);
+        }, delayed ? 10000 : autoShutDownMillis[autoShutDown]);
     }
 
     @Override
@@ -126,23 +157,25 @@ public class PlaybackService extends Service {
         Log.i("start", "Service started");
         if (intent != null) {
             if (intent.getAction() == null) {
-
             } else {
                 String action = intent.getAction();
                 switch (action) {
                     case ACTION_START_SERVICE:
                         playlist = new Playlist().fromJson(intent.getStringExtra("playlist"));
-                        currentPlaylistIndex = sp.getInt("currentPlaylistIndex", 0);
                         currentVideoIndex = sp.getInt("currentVideoIndex", 0);
                         currentSecond = sp.getInt("currentSecond", 0);
+                        shuffle = sp.getBoolean("shuffle", false);
+                        autoShutDown = sp.getInt("autoShutDown", 0);
                         spe.putBoolean("serviceRunning", true).commit();
                         isStarting = true;
                         if (isReady) initializePlayer();
+                        if (autoShutDown != 0) startTimer(false);
                         break;
                     case ACTION_PLAY:
                         play();
                         break;
                     case ACTION_CLOSE:
+                        notificationManager.cancel(102);
                         stopSelf();
                         break;
                     case ACTION_PAUSE:
@@ -153,6 +186,11 @@ public class PlaybackService extends Service {
                         break;
                     case ACTION_NEXT:
                         playNext();
+                        break;
+                    case ACTION_CONTINUE:
+                        handler.removeCallbacksAndMessages(null);
+                        startTimer(true);
+                        notificationManager.cancel(102);
                         break;
                     default:
                         break;
@@ -167,32 +205,115 @@ public class PlaybackService extends Service {
         youTubePlayerView.release();
         spe.putBoolean("serviceRunning", false).commit();
         notificationManager.cancel(R.string.app_name);
+        notificationManager.cancel(102);
+        handler.removeCallbacksAndMessages(null);
     }
 
-    private Notification getNotification() {
+    private Notification getNotification2() {
+        Notification notification;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification notification = new Notification.Builder(this, "def")
+            notification = new Notification.Builder(this, "def")
                     .setSmallIcon(R.drawable.baseline_smart_display_24)
                     .setTicker(getString(R.string.app_name))  // the status text
-                    .setContentTitle(getString(R.string.app_name))  // the label of the entry
-                    .setContentText("Yükleniyor...")
+                    .setContentTitle(playlist.getVideoAt(currentVideoIndex).title)  // the label of the entry
+                    .setContentText(playlist.title)
                     .setWhen(System.currentTimeMillis())
                     .setContentIntent(getPendingIntent())
+                    .setDeleteIntent(getIntentFor(ACTION_CLOSE))
+                    .setColor(getResources().getColor(R.color.very_dark_grey, getTheme()))
+                    .setColorized(true)
+                    .setStyle(new Notification.DecoratedMediaCustomViewStyle()
+                            .setShowActionsInCompactView(0, 1, 2)
+                            .setMediaSession(mediaSession.getSessionToken()))
+                    .addAction(new Notification.Action.Builder(
+                            Icon.createWithResource(this, R.drawable.baseline_skip_previous_24),
+                            "Önceki",
+                            getIntentFor(ACTION_PREV)).build())
+                    .addAction(new Notification.Action.Builder(
+                            Icon.createWithResource(this, isPlaying ? R.drawable.baseline_pause_24 : R.drawable.baseline_play_arrow_24),
+                            isPlaying ? "Duraklat" : "Çal",
+                            getIntentFor(ACTION_PLAY)).build())
+                    .addAction(new Notification.Action.Builder(
+                            Icon.createWithResource(this, R.drawable.baseline_skip_next_24),
+                            "Sonraki",
+                            getIntentFor(ACTION_NEXT)).build())
+                    .addAction(new Notification.Action.Builder(
+                            Icon.createWithResource(this, R.drawable.baseline_forward_5_24),
+                            "İleri atla",
+                            getIntentFor(ACTION_PAUSE)).build())
+                    .addAction(new Notification.Action.Builder(
+                            Icon.createWithResource(this, R.drawable.baseline_stop_24),
+                            "Durdur",
+                            getIntentFor(ACTION_CLOSE)).build())
+                    .setChannelId("def")
+                    .setAutoCancel(false)
                     .setCustomContentView(getRemoteViews())
                     .build();
-            return notification;
         } else {
-            return new Notification();
+            notification = new NotificationCompat.Builder(this, "def")
+                    .setSmallIcon(R.drawable.baseline_smart_display_24)
+                    .setTicker(getString(R.string.app_name))  // the status text
+                    .setContentTitle(playlist.getVideoAt(currentVideoIndex).title)  // the label of the entry
+                    .setContentText(playlist.title)
+                    .setWhen(System.currentTimeMillis())
+                    .setContentIntent(getPendingIntent())
+                    .setDeleteIntent(getIntentFor(ACTION_CLOSE))
+                    .setColor(getResources().getColor(R.color.very_dark_grey, getTheme()))
+                    .setColorized(true)
+                    .setStyle(new NotificationCompat.DecoratedCustomViewStyle())
+                    .addAction(new NotificationCompat.Action.Builder(
+                            R.drawable.baseline_skip_previous_24,
+                            "Önceki",
+                            getIntentFor(ACTION_PREV)).build())
+                    .addAction(new NotificationCompat.Action.Builder(
+                            isPlaying ? R.drawable.baseline_pause_24 : R.drawable.baseline_play_arrow_24,
+                            isPlaying ? "Duraklat" : "Çal",
+                            getIntentFor(ACTION_PLAY)).build())
+                    .addAction(new NotificationCompat.Action.Builder(
+                            R.drawable.baseline_skip_next_24,
+                            "Sonraki",
+                            getIntentFor(ACTION_NEXT)).build())
+                    .addAction(new NotificationCompat.Action.Builder(
+                            R.drawable.baseline_forward_5_24,
+                            "İleri atla",
+                            getIntentFor(ACTION_PAUSE)).build())
+                    .addAction(new NotificationCompat.Action.Builder(
+                            R.drawable.baseline_stop_24,
+                            "Durdur",
+                            getIntentFor(ACTION_CLOSE)).build())
+                    .setChannelId("def")
+                    .setAutoCancel(false)
+                    .build();
         }
+        return notification;
+    }
+
+    private @NonNull Notification getTimeoutNotification() {
+        Notification notification;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notification = new NotificationCompat.Builder(this, "def")
+                    .setSmallIcon(R.drawable.baseline_smart_display_24)
+                    .setTicker(getString(R.string.app_name))
+                    .setContentTitle(getString(R.string.app_name))
+                    .setContentText("Oynatıcı otomatik olarak kapatılacak.")
+                    .setWhen(System.currentTimeMillis())
+                    .setColor(getResources().getColor(R.color.very_dark_grey, getTheme()))
+                    .setColorized(true)
+                    .setStyle(new NotificationCompat.DecoratedCustomViewStyle())
+                    .setAutoCancel(true)
+                    .addAction(new NotificationCompat.Action.Builder(null, "Şimdi kapat", getIntentFor(ACTION_CLOSE)).build())
+                    .addAction(new NotificationCompat.Action.Builder(null, "30 dakika daha çal", getIntentFor(ACTION_CONTINUE)).build())
+                    .setSilent(true)
+                    .build();
+        } else {
+            notification = new NotificationCompat.Builder(this, "def")
+                    .build();
+        }
+        return notification;
     }
 
     private @NonNull RemoteViews getRemoteViews() {
         RemoteViews views = new RemoteViews(getPackageName(), R.layout.playback_notification);
-        views.setOnClickPendingIntent(R.id.play, getIntentFor(ACTION_PLAY));
-        views.setOnClickPendingIntent(R.id.off, getIntentFor(ACTION_CLOSE));
-        views.setOnClickPendingIntent(R.id.pause, getIntentFor(ACTION_PAUSE));
-        views.setOnClickPendingIntent(R.id.previous, getIntentFor(ACTION_PREV));
-        views.setOnClickPendingIntent(R.id.next, getIntentFor(ACTION_NEXT));
         views.setImageViewResource(R.id.icon, R.drawable.baseline_smart_display_24);
         views.setImageViewResource(R.id.play, isPlaying ? R.drawable.baseline_pause_24 : R.drawable.baseline_play_arrow_24);
         views.setImageViewResource(R.id.off, R.drawable.baseline_stop_24);
@@ -206,13 +327,13 @@ public class PlaybackService extends Service {
     private @NonNull PendingIntent getPendingIntent() {
         Intent intent = new Intent(this, MainActivity.class);
         intent.setAction(Intent.ACTION_MAIN);
-        return PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        return PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
 
     private @NonNull PendingIntent getIntentFor(String action) {
         Intent intent = new Intent(this, PlaybackService.class);
         intent.setAction(action);
-        return PendingIntent.getService(this, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        return PendingIntent.getService(this, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
 
     private final String ACTION_START_SERVICE = "com.opl.ACTION_START_SERVICE";
@@ -221,6 +342,7 @@ public class PlaybackService extends Service {
     private final String ACTION_PAUSE = "com.opl.ACTION_PAUSE";
     private final String ACTION_PREV = "com.opl.ACTION_PREV";
     private final String ACTION_NEXT = "com.opl.ACTION_NEXT";
+    private final String ACTION_CONTINUE = "com.opl.ACTION_CONTINUE";
 
     private void initializePlayer() {
         youTubePlayer.loadVideo(playlist.getVideoAt(currentVideoIndex).id, currentSecond);
@@ -246,15 +368,15 @@ public class PlaybackService extends Service {
         changeVideo();
     }
 
+    private void playRandom() {
+        if (playlistIndexes.isEmpty()) for (int i = 0; i < playlist.getLength(); i++) playlistIndexes.add(i);
+        currentVideoIndex = playlistIndexes.get(new Random().nextInt(playlistIndexes.size()));
+        changeVideo();
+    }
+
     private void playOtherVideo() {
         if (shuffle) {
-            Random random = new Random();
-            int index = -1;
-            do {
-                index = random.nextInt(playlist.getLength());
-            } while (index == currentVideoIndex);
-            currentVideoIndex = index;
-            changeVideo();
+            playRandom();
         } else {
             playNext();
         }
@@ -263,6 +385,7 @@ public class PlaybackService extends Service {
     private void changeVideo() {
         YouTubeVideo video = playlist.getVideoAt(currentVideoIndex);
         youTubePlayer.loadVideo(video.id, video.musicStartSeconds);
+        playlistIndexes.remove((Integer) currentVideoIndex);
         title = video.title;
         startForegroundService();
         spe.putInt("currentVideoIndex", currentVideoIndex).commit();

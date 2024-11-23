@@ -2,34 +2,62 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical"
     android:paddingStart="16dp"
     android:paddingTop="16dp"
     android:paddingEnd="16dp"
     android:paddingBottom="8dp">
 
-    <EditText
-        android:id="@+id/editUrl"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
-        android:background="@color/dark_grey"
-        android:ems="10"
-        android:hint="@string/url_id_search"
-        android:imeOptions="actionGo"
-        android:inputType="text"
-        android:padding="16dp"
-        android:textColor="@color/white"
-        android:textColorHint="@color/very_dark_grey"
-        android:textSize="14sp" />
+        android:orientation="horizontal">
 
-    <WebView
-        android:id="@+id/webView"
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+
+            <EditText
+                android:id="@+id/editUrl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/dark_grey"
+                android:ems="10"
+                android:hint="@string/url_id_search"
+                android:imeOptions="actionGo"
+                android:inputType="text"
+                android:padding="16dp"
+                android:textColor="@color/white"
+                android:textColorHint="@color/blue_grey"
+                android:textSize="14sp" />
+        </androidx.cardview.widget.CardView>
+
+        <ImageButton
+            android:id="@+id/searchButton"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:backgroundTint="@color/soft_red"
+            android:visibility="gone"
+            app:srcCompat="@drawable/baseline_search_24" />
+    </LinearLayout>
+
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
-        android:layout_height="360dp"
+        android:layout_height="match_parent"
         android:layout_marginBottom="8dp"
-        android:visibility="visible" />
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp">
+
+        <WebView
+            android:id="@+id/webView"
+            android:layout_width="match_parent"
+            android:layout_height="360dp"
+            android:visibility="gone" />
+    </androidx.cardview.widget.CardView>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -44,7 +72,7 @@
             android:layout_weight="0"
             android:background="@drawable/ripple_on_very_dark_grey"
             android:padding="8dp"
-            android:visibility="visible"
+            android:visibility="gone"
             app:srcCompat="@drawable/baseline_arrow_back_24" />
 
         <ImageView
@@ -54,7 +82,7 @@
             android:layout_weight="0"
             android:background="@drawable/ripple_on_very_dark_grey"
             android:padding="8dp"
-            android:visibility="visible"
+            android:visibility="gone"
             app:srcCompat="@drawable/baseline_refresh_24" />
 
         <ImageView
@@ -64,7 +92,7 @@
             android:layout_weight="0"
             android:background="@drawable/ripple_on_very_dark_grey"
             android:padding="8dp"
-            android:visibility="visible"
+            android:visibility="gone"
             app:srcCompat="@drawable/baseline_arrow_forward_24" />
 
         <Space
@@ -76,7 +104,7 @@
             android:id="@+id/addVideoButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="0"
+            android:layout_weight="1"
             android:text="@string/dialog_button_add"
             android:visibility="invisible"
             app:backgroundTint="@color/soft_red"
@@ -91,7 +119,7 @@
             android:id="@+id/cancelButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="0"
+            android:layout_weight="1"
             android:text="@string/dialog_button_cancel" />
     </LinearLayout>
 
