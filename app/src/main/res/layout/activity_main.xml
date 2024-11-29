@@ -68,6 +68,7 @@
                     android:id="@+id/replayButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/ripple_on_black"
                     android:padding="16dp"
                     app:srcCompat="@drawable/baseline_replay_5_24" />
 
@@ -75,6 +76,7 @@
                     android:id="@+id/playButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/ripple_on_black"
                     android:padding="16dp"
                     app:srcCompat="@drawable/baseline_play_arrow_24" />
 
@@ -82,6 +84,7 @@
                     android:id="@+id/forwardButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/ripple_on_black"
                     android:padding="16dp"
                     app:srcCompat="@drawable/baseline_forward_5_24" />
 
@@ -157,7 +160,7 @@
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:clipToPadding="false"
-                android:paddingBottom="80dp"
+                android:paddingBottom="84dp"
                 android:scrollbarAlwaysDrawVerticalTrack="true"
                 android:scrollbarStyle="outsideOverlay"
                 android:scrollbars="vertical"
@@ -171,7 +174,7 @@
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:clipToPadding="false"
-                android:paddingBottom="80dp">
+                android:paddingBottom="84dp">
 
             </androidx.recyclerview.widget.RecyclerView>
 

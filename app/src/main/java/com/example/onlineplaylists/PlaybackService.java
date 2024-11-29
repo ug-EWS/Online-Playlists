@@ -80,7 +80,7 @@ public class PlaybackService extends Service {
     private String title = "Online Playlists";
     private ArrayList<Integer> playlistIndexes;
     private int autoShutDown;
-    private int[] autoShutDownMillis = {0, 10000, 1800000, 3600000};
+    private final int[] autoShutDownMillis = {0, 10000, 1800000, 3600000};
 
     @Override
     public void onCreate() {
@@ -170,6 +170,7 @@ public class PlaybackService extends Service {
                         isStarting = true;
                         if (isReady) initializePlayer();
                         if (autoShutDown != 0) startTimer(false);
+                        startForegroundService();
                         break;
                     case ACTION_PLAY:
                         play();
@@ -217,7 +218,8 @@ public class PlaybackService extends Service {
                     .setTicker(getString(R.string.app_name))  // the status text
                     .setContentTitle(playlist.getVideoAt(currentVideoIndex).title)  // the label of the entry
                     .setContentText(playlist.title)
-                    .setWhen(System.currentTimeMillis())
+                    //.setWhen(System.currentTimeMillis())
+                    .setShowWhen(false)
                     .setContentIntent(getPendingIntent())
                     .setDeleteIntent(getIntentFor(ACTION_CLOSE))
                     .setColor(getResources().getColor(R.color.very_dark_grey, getTheme()))
@@ -245,7 +247,7 @@ public class PlaybackService extends Service {
                             Icon.createWithResource(this, R.drawable.baseline_stop_24),
                             "Durdur",
                             getIntentFor(ACTION_CLOSE)).build())
-                    .setChannelId("def")
+                    //.setCategory(Notification.CATEGORY_SERVICE)
                     .setAutoCancel(false)
                     .setCustomContentView(getRemoteViews())
                     .build();
@@ -297,13 +299,10 @@ public class PlaybackService extends Service {
                     .setContentTitle(getString(R.string.app_name))
                     .setContentText("Oynatıcı otomatik olarak kapatılacak.")
                     .setWhen(System.currentTimeMillis())
-                    .setColor(getResources().getColor(R.color.very_dark_grey, getTheme()))
-                    .setColorized(true)
                     .setStyle(new NotificationCompat.DecoratedCustomViewStyle())
                     .setAutoCancel(true)
                     .addAction(new NotificationCompat.Action.Builder(null, "Şimdi kapat", getIntentFor(ACTION_CLOSE)).build())
                     .addAction(new NotificationCompat.Action.Builder(null, "30 dakika daha çal", getIntentFor(ACTION_CONTINUE)).build())
-                    .setSilent(true)
                     .build();
         } else {
             notification = new NotificationCompat.Builder(this, "def")
@@ -347,7 +346,7 @@ public class PlaybackService extends Service {
     private void initializePlayer() {
         youTubePlayer.loadVideo(playlist.getVideoAt(currentVideoIndex).id, currentSecond);
         title = playlist.getVideoAt(currentVideoIndex).title;
-        startForegroundService();
+        //startForegroundService();
     }
 
     private void play(){
@@ -386,8 +385,8 @@ public class PlaybackService extends Service {
         YouTubeVideo video = playlist.getVideoAt(currentVideoIndex);
         youTubePlayer.loadVideo(video.id, video.musicStartSeconds);
         playlistIndexes.remove((Integer) currentVideoIndex);
-        title = video.title;
         startForegroundService();
+        title = video.title;
         spe.putInt("currentVideoIndex", currentVideoIndex).commit();
     }
 }

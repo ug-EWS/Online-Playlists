@@ -33,6 +33,23 @@
     <item
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:title="Müzik tuşları">
+        <menu>
+            <group
+                android:checkableBehavior="single"
+                android:enabled="true">
+                <item
+                    android:id="@+id/rewindForward"
+                    android:title="Geri ve ileri sarma" />
+                <item
+                    android:id="@+id/prevNext"
+                    android:title="Önceki ve sonraki" />
+            </group>
+        </menu>
+    </item>
+    <item
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:title="Otomatik kapanma">
         <menu>
             <group

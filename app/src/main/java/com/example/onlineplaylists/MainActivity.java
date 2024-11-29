@@ -77,18 +77,18 @@ import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
 
 public class MainActivity extends AppCompatActivity {
-    private YouTubePlayer youTubePlayer;
+    YouTubePlayer youTubePlayer;
 
     private YouTubePlayerView youTubePlayerView;
     private LinearLayout layout;
     private LinearLayout list;
     private ImageView icon;
-    private TextView titleText;
+    TextView titleText;
     private FloatingActionButton addButton;
     private ImageView options;
     private ImageView settings;
     private RecyclerView listOfPlaylistsRecycler;
-    private RecyclerView playlistRecycler;
+    RecyclerView playlistRecycler;
     private PopupMenu settingsPopupMenu;
     private LinearLayout musicController;
     private TextView musicTitle;
@@ -116,15 +116,15 @@ public class MainActivity extends AppCompatActivity {
     private ImageView videoNext;
 
 
-    private ListOfPlaylistsAdapter listOfPlaylistsAdapter;
+    ListOfPlaylistsAdapter listOfPlaylistsAdapter;
     private PlaylistAdapter playlistAdapter;
 
-    private ListOfPlaylists listOfPlaylists;
+    ListOfPlaylists listOfPlaylists;
 
-    private Playlist currentPlaylist, playingPlaylist, cutPlaylist;
-    private YouTubeVideo playingVideo, cutVideo;
+    Playlist currentPlaylist, playingPlaylist, cutPlaylist;
+    YouTubeVideo playingVideo, cutVideo;
 
-    private int currentPlaylistIndex = -1,
+    int currentPlaylistIndex = -1,
             playingPlaylistIndex = -1,
             playingVideoIndex = -1,
             cutPlaylistIndex = -1,
@@ -140,17 +140,17 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences sp;
     private SharedPreferences.Editor spe;
 
-    private boolean viewMode;
+    boolean viewMode;
     private boolean isPortrait;
     private boolean isFullscreen;
-    private boolean isPlaying;
+    boolean isPlaying;
     private boolean cut;
     private boolean shuffle;
     private boolean musicMode;
     private boolean showController;
     private boolean serviceRunning;
     private boolean areControlsVisible;
-    private boolean showThumbnails;
+    boolean showThumbnails;
     private boolean musicControlsMode;
 
     private ArrayList<Integer> playlistIndexes;
@@ -181,10 +181,10 @@ public class MainActivity extends AppCompatActivity {
         shuffle = sp.getBoolean("shuffle", false);
         musicMode = sp.getBoolean("musicMode", false);
         autoShutDown = sp.getInt("autoShutDown", 0);
-        musicControlsMode = sp.getBoolean("musicControlsMode", false);
+        musicControlsMode = sp.getBoolean("musicControlsMode", true);
 
-        playlistDialog = new PlaylistDialog(-1);
-        videoDialog = new VideoDialog();
+        playlistDialog = new PlaylistDialog(this, -1);
+        videoDialog = new VideoDialog(this);
 
         playlistIndexes = new ArrayList<>();
 
@@ -196,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
                     isFullscreen = false;
                     updateLayout();
                     fullscreen.setImageResource(R.drawable.baseline_fullscreen_24);
-                } else if(viewMode) {
+                } else if (viewMode) {
                     setViewMode(false);
                 } else {
                     finish();
@@ -208,6 +208,7 @@ public class MainActivity extends AppCompatActivity {
         isPortrait = true;
         isFullscreen = false;
         areControlsVisible = true;
+        setMusicControlsMode(musicControlsMode);
         updateLayout();
     }
 
@@ -315,7 +316,7 @@ public class MainActivity extends AppCompatActivity {
         settings = findViewById(R.id.settings);
         listOfPlaylistsRecycler = findViewById(R.id.listOfPlaylistsRecycler);
         listOfPlaylistsRecycler.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
-        listOfPlaylistsAdapter = new ListOfPlaylistsAdapter();
+        listOfPlaylistsAdapter = new ListOfPlaylistsAdapter(this);
         listOfPlaylistsRecycler.setAdapter(listOfPlaylistsAdapter);
         new ItemTouchHelper(new ItemMoveCallback(listOfPlaylistsAdapter)).attachToRecyclerView(listOfPlaylistsRecycler);
         playlistRecycler = findViewById(R.id.playlistRecycler);
@@ -398,11 +399,11 @@ public class MainActivity extends AppCompatActivity {
         musicController = findViewById(R.id.musicController);
         musicTitle = findViewById(R.id.musicTitle);
         replayButton = findViewById(R.id.replayButton);
-        replayButton.setOnClickListener(v -> controllerReplay());
+        replayButton.setOnClickListener(v -> {if (musicControlsMode) controllerReplay(); else playPrevious();});
         playButton = findViewById(R.id.playButton);
         playButton.setOnClickListener(v -> controllerPlayPause());
         forwardButton = findViewById(R.id.forwardButton);
-        forwardButton.setOnClickListener(v -> controllerForward());
+        forwardButton.setOnClickListener(v -> {if (musicControlsMode) controllerForward(); else playNext();});
         videoController = mainView.findViewById(R.id.mainLay);
         videoController.setOnClickListener(v -> {
             areControlsVisible = !areControlsVisible;
@@ -494,7 +495,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private @NonNull PopupMenu getPlaylistPopupMenu(View anchor, boolean current, int index) {
+    @NonNull PopupMenu getPlaylistPopupMenu(View anchor, boolean current, int index) {
         PopupMenu menu = new PopupMenu(context, anchor);
         menu.inflate(R.menu.playlist_options);
         for (int i = 0; i < 2; i++) menu.getMenu().getItem(i).setVisible(!current);
@@ -530,7 +531,7 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
             if (itemIndex == R.id.edit) {
-                new PlaylistDialog(index).show();
+                new PlaylistDialog(this, index).show();
                 return true;
             }
             if (itemIndex == R.id.share) {
@@ -557,7 +558,7 @@ public class MainActivity extends AppCompatActivity {
         return menu;
     }
 
-    private @NonNull PopupMenu getVideoPopupMenu(View anchor, int index) {
+    @NonNull PopupMenu getVideoPopupMenu(View anchor, int index) {
         PopupMenu menu = new PopupMenu(context, anchor);
         menu.inflate(R.menu.video_options);
         menu.setOnMenuItemClickListener(item -> {
@@ -621,6 +622,7 @@ public class MainActivity extends AppCompatActivity {
         if (autoShutDown == 1) menu.findItem(R.id.auto10Min).setChecked(true);
         if (autoShutDown == 2) menu.findItem(R.id.auto30Min).setChecked(true);
         if (autoShutDown == 3) menu.findItem(R.id.auto1Hour).setChecked(true);
+        if (musicControlsMode) menu.findItem(R.id.rewindForward).setChecked(true); else menu.findItem(R.id.prevNext).setChecked(true);
         menu.findItem(R.id.shuffleMode).setChecked(shuffle);
         menu.findItem(R.id.musicMode).setChecked(musicMode);
         popupMenu.setOnMenuItemClickListener(item -> {
@@ -673,6 +675,18 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
 
+            if (itemIndex == R.id.rewindForward) {
+                setMusicControlsMode(true);
+                item.setChecked(true);
+                return false;
+            }
+
+            if (itemIndex == R.id.prevNext) {
+                setMusicControlsMode(false);
+                item.setChecked(true);
+                return false;
+            }
+
             if (itemIndex == R.id.about) {
                 return true;
             }
@@ -719,7 +733,7 @@ public class MainActivity extends AppCompatActivity {
         startActivity(Intent.createChooser(intent, getString(R.string.share)));
     }
 
-    private void openPlaylist(int index) {
+    void openPlaylist(int index) {
         openPlaylist(index, 0);
     }
 
@@ -735,7 +749,7 @@ public class MainActivity extends AppCompatActivity {
         playlistRecycler.scrollToPosition(scroll);
     }
 
-    private void playVideo(int index, boolean switchPlaylist) {
+    void playVideo(int index, boolean switchPlaylist) {
         playVideo(index, musicMode ? currentPlaylist.getVideoAt(index).musicStartSeconds : 0, switchPlaylist);
     }
 
@@ -801,211 +815,14 @@ public class MainActivity extends AppCompatActivity {
         playVideo(index, false);
     }
 
-    private void closePlayer() {
+    void closePlayer() {
         playingPlaylistIndex = -1;
         playingVideoIndex = -1;
         youTubePlayer.pause();
         showController = false;
         updateLayout();
     }
-    class PlaylistDialog {
-        AlertDialog.Builder builder;
-        AlertDialog dialog;
-        View dialogView;
-        EditText editText;
-        LinearLayout iconSelector;
-        Playlist toEdit;
-        int whereToAdd;
-        int selectedIcon;
 
-        PlaylistDialog(int _forPlaylist) {
-
-            builder = new AlertDialog.Builder(context, R.style.Theme_OnlinePlaylistsDialogDark);
-            dialogView = getLayoutInflater().inflate(R.layout.add_playlist, null);
-            editText = dialogView.findViewById(R.id.editText);
-            iconSelector = dialogView.findViewById(R.id.iconSelector);
-            View.OnClickListener onClickListener = view -> {
-                selectedIcon = iconSelector.indexOfChild(view);
-                for (int i = 0; i < 5; i++) {
-                    iconSelector.getChildAt(i).setBackgroundColor(i == selectedIcon ? getResources().getColor(R.color.soft_red, getTheme()): Color.TRANSPARENT);
-                }
-            };
-            for (int i = 0; i < 5; i++) {
-                iconSelector.getChildAt(i).setOnClickListener(onClickListener);
-            }
-            builder.setNegativeButton(getString(R.string.dialog_button_cancel), (dialog, which) -> dialog.dismiss());
-            builder.setView(dialogView);
-            editText.setOnEditorActionListener((v, actionId, event) -> {
-                if (actionId == EditorInfo.IME_ACTION_GO) {
-                    dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick();
-                    return true;
-                }
-                return false;
-            });
-            boolean _newPlaylist = _forPlaylist == -1;
-            builder.setTitle(getString(_newPlaylist ? R.string.add_playlist : R.string.edit_playlist));
-            if (_newPlaylist) {
-                iconSelector.getChildAt(0).setBackgroundColor(getResources().getColor(R.color.soft_red, getTheme()));
-                builder.setPositiveButton(getString(R.string.dialog_button_add), (dialog, which) -> {
-                    String text = editText.getText().toString();
-                    if (text.isEmpty()) text = editText.getHint().toString();
-                    listOfPlaylists.addPlaylistTo(new Playlist(text, selectedIcon), whereToAdd);
-                    listOfPlaylistsAdapter.insertItem(whereToAdd);
-                    dialog.dismiss();
-                });
-            } else {
-                toEdit = listOfPlaylists.getPlaylistAt(_forPlaylist);
-                editText.setText(toEdit.title);
-                selectedIcon = toEdit.icon;
-                if (selectedIcon > 4 || selectedIcon < 0) selectedIcon = 0;
-                iconSelector.getChildAt(selectedIcon).setBackgroundColor(getResources().getColor(R.color.soft_red, getTheme()));
-                builder.setPositiveButton(getString(R.string.dialog_button_apply), (dialog, which) -> {
-                    String text = editText.getText().toString();
-                    toEdit.title = text;
-                    toEdit.icon = selectedIcon;
-                    if(viewMode) titleText.setText(text);
-                    else listOfPlaylistsAdapter.notifyItemChanged(_forPlaylist);
-                });
-            }
-
-            dialog = builder.create();
-        }
-        public void show() {
-            dialog.show();
-        }
-        public void show(int _whereToAdd) {
-            whereToAdd = _whereToAdd;
-            dialog.show();
-        }
-    }
-
-    class VideoDialog {
-        AlertDialog.Builder builder;
-        AlertDialog dialog;
-        String url;
-        String title;
-        View dialogView;
-        EditText editText;
-        Button addButton;
-        Button cancelButton;
-        WebView webView;
-        ImageView backButton;
-        ImageView refreshButton;
-        ImageView forwardButton;
-        ImageButton searchButton;
-        int whereToAdd;
-
-        @SuppressLint("SetJavaScriptEnabled")
-        VideoDialog() {
-            builder = new AlertDialog.Builder(context, R.style.Theme_OnlinePlaylistsDialogDark);
-            dialog = builder.create();
-            dialog.setTitle(getString(R.string.add_video));
-
-            dialogView = getLayoutInflater().inflate(R.layout.add_video, null);
-            editText = dialogView.findViewById(R.id.editUrl);
-            addButton = dialogView.findViewById(R.id.addVideoButton);
-            cancelButton = dialogView.findViewById(R.id.cancelButton);
-            webView = dialogView.findViewById(R.id.webView);
-            backButton = dialogView.findViewById(R.id.webBackButton);
-            refreshButton = dialogView.findViewById(R.id.webRefreshButton);
-            forwardButton = dialogView.findViewById(R.id.webForwardButton);
-            searchButton = dialogView.findViewById(R.id.searchButton);
-
-            webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
-            webView.getSettings().setJavaScriptEnabled(true);
-            webView.setWebViewClient(new WebViewClient());
-            webView.setWebChromeClient(new WebChromeClient() {
-                @Override
-                public void onReceivedTitle(WebView v, String t) {
-                    super.onReceivedTitle(v, t);
-                    url = webView.getUrl();
-                    addButton.setVisibility(url.contains("watch") ? View.VISIBLE : View.GONE);
-                    title = t;
-                    backButton.setVisibility(webView.canGoBack() ? View.VISIBLE : View.GONE);
-                    forwardButton.setVisibility(webView.canGoForward() ? View.VISIBLE : View.GONE);
-                }
-            });
-
-            addButton.setOnClickListener(view -> {
-                String id = YouTubeVideo.getVideoIdFrom(url);
-                title = title.replace(" - YouTube","");
-                currentPlaylist.addVideoTo(new YouTubeVideo(title, id), whereToAdd);
-                PlaylistAdapter a = (PlaylistAdapter) playlistRecycler.getAdapter();
-                a.insertItem(whereToAdd);
-                dismiss();
-            });
-
-            cancelButton.setOnClickListener(view -> dismiss());
-
-            backButton.setOnClickListener(view -> webView.goBack());
-
-            refreshButton.setOnClickListener(view -> webView.reload());
-
-            forwardButton.setOnClickListener(view -> webView.goForward());
-
-            editText.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-                }
-
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    searchButton.setVisibility(s.toString().isEmpty() ? View.GONE : View.VISIBLE);
-                }
-
-                @Override
-                public void afterTextChanged(Editable s) {
-
-                }
-            });
-
-            searchButton.setOnClickListener(v -> search());
-
-            editText.setOnEditorActionListener((v, actionId, event) -> {
-                if (actionId == EditorInfo.IME_ACTION_GO) {
-                    search();
-                    return true;
-                }
-                return false;
-            });
-
-            dialog.setView(dialogView);
-
-        }
-        public void show(int _whereToAdd) {
-            whereToAdd = _whereToAdd;
-            webView.onResume();
-            //webView.resumeTimers();
-            webView.reload();
-            dialog.show();
-        }
-
-        private void dismiss() {
-            webView.setEnabled(false);
-            webView.onPause();
-            //webView.pauseTimers();
-            webView.reload();
-            dialog.dismiss();
-        }
-
-        private void search() {
-            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-            imm.hideSoftInputFromWindow(editText.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
-            String text = editText.getText().toString();
-            if (text.contains("/watch?") && text.indexOf("http") == 0) {
-                webView.loadUrl(text);
-            }
-            else if (text.length() == 11) {
-                webView.loadUrl("https://m.youtube.com/watch?v=".concat(text));
-            }
-            else {
-                webView.loadUrl("https://m.youtube.com/results?search_query=".concat(text));
-            }
-            webView.setVisibility(View.VISIBLE);
-            refreshButton.setVisibility(View.VISIBLE);
-        }
-    }
     private void showMessage(String text) {
         Toast.makeText(context, text, Toast.LENGTH_SHORT).show();
     }
@@ -1017,7 +834,7 @@ public class MainActivity extends AppCompatActivity {
         playlistRecycler.setVisibility(mode ? View.VISIBLE : View.GONE);
         if (mode) {
             if (playlistAdapter == null) {
-                playlistAdapter = new PlaylistAdapter();
+                playlistAdapter = new PlaylistAdapter(this);
                 playlistRecycler.setAdapter(playlistAdapter);
                 new ItemTouchHelper(new ItemMoveCallback(playlistAdapter)).attachToRecyclerView(playlistRecycler);
             } else {
@@ -1031,6 +848,12 @@ public class MainActivity extends AppCompatActivity {
         icon.setImageResource(viewMode ? R.drawable.baseline_arrow_back_24 : R.drawable.baseline_smart_display_24);
         icon.setClickable(viewMode);
         options.setVisibility(mode ? View.VISIBLE : View.GONE);
+    }
+
+    private void setMusicControlsMode(boolean _musicControlsMode) {
+        musicControlsMode = _musicControlsMode;
+        replayButton.setImageResource(musicControlsMode ? R.drawable.baseline_replay_5_24 : R.drawable.baseline_skip_previous_24);
+        forwardButton.setImageResource(musicControlsMode ? R.drawable.baseline_forward_5_24 : R.drawable.baseline_skip_next_24);
     }
 
     private void updateLayout() {
@@ -1059,226 +882,6 @@ public class MainActivity extends AppCompatActivity {
         if (showThumbnails != showThumbnailsNewValue) {
             showThumbnails = showThumbnailsNewValue;
             if (viewMode) playlistRecycler.getAdapter().notifyDataSetChanged();
-        }
-    }
-
-    class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements ItemMoveCallback.ItemTouchHelperContract {
-        @NonNull
-        @Override
-        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            LayoutInflater inf = getLayoutInflater();
-            View itemView = inf.inflate(R.layout.video_item, parent, false);
-            return new RecyclerView.ViewHolder(itemView) {};
-        }
-
-        @Override
-        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-            View itemView = holder.itemView;
-            int pos = holder.getAdapterPosition();
-
-            ImageView thumbnail = itemView.findViewById(R.id.videoThumbnail);
-            TextView title = itemView.findViewById(R.id.videoTitle);
-            ImageView options = itemView.findViewById(R.id.videoOptions);
-            CardView card = itemView.findViewById(R.id.card);
-
-            setItemOnClickListener(itemView, pos);
-
-            itemView.setBackgroundResource(currentPlaylistIndex == playingPlaylistIndex && playingVideoIndex == pos
-                    ? R.drawable.list_item_playing
-                    : R.drawable.list_item);
-
-            YouTubeVideo thisVideo = currentPlaylist.getVideoAt(pos);
-            title.setText(thisVideo.title);
-            title.setTextColor(currentPlaylistIndex == playingPlaylistIndex && playingVideoIndex == pos ? Color.GREEN : Color.WHITE);
-            Glide.with(MainActivity.this).load(thisVideo.getThumbnailUrl()).into(thumbnail);
-            card.setVisibility(showThumbnails ? View.VISIBLE : View.GONE);
-
-            PopupMenu popupMenu = getVideoPopupMenu(options, pos);
-            options.setOnClickListener(view -> popupMenu.show());
-        }
-
-        @Override
-        public int getItemCount() {
-            return currentPlaylist.getLength();
-        }
-        public void insertItem(int index) {
-            if (playingVideoIndex != -1 && index <= playingVideoIndex && currentPlaylistIndex == playingPlaylistIndex) {
-                playingVideoIndex++;
-                playingVideo = currentPlaylist.getVideoAt(playingVideoIndex);
-            }
-            if (cutVideo != null && index <= cutVideoIndex && currentPlaylistIndex == cutPlaylistIndex) {
-                cutVideoIndex = currentPlaylist.getIndexOf(cutVideo);
-            }
-            this.notifyItemInserted(index);
-            this.notifyItemRangeChanged(index, listOfPlaylists.getLength()-index);
-        }
-        public void removeItem(int index) {
-            if (playingVideo != null && currentPlaylistIndex == playingPlaylistIndex) {
-                if (index < playingVideoIndex) {
-                    playingVideoIndex = currentPlaylist.getIndexOf(playingVideo);
-                }
-                if (index == playingVideoIndex) {
-                    closePlayer();
-                }
-            }
-            if (cutVideo != null && currentPlaylistIndex == cutPlaylistIndex) {
-                if (index < cutVideoIndex) {
-                    cutVideoIndex = currentPlaylist.getIndexOf(cutVideo);
-                }
-                if (index == cutVideoIndex) {
-                    cutPlaylist = null;
-                    cutVideo = null;
-                }
-            }
-            this.notifyItemRemoved(index);
-            this.notifyItemRangeChanged(index, listOfPlaylists.getLength()-index);
-        }
-        private void setItemOnClickListener(View v, int position) {
-            v.setOnClickListener(view -> {
-                if ((currentPlaylistIndex == playingPlaylistIndex && position == playingVideoIndex))
-                    if (isPlaying) youTubePlayer.pause(); else youTubePlayer.play();
-                    else playVideo(position, true);});
-        }
-
-        @Override
-        public void onRowMoved(int fromPosition, int toPosition) {
-            currentPlaylist.moveVideo(fromPosition, toPosition);
-
-            int positionMin = Math.min(fromPosition, toPosition);
-            int positionMax = Math.max(fromPosition, toPosition);
-
-            if (currentPlaylistIndex == playingPlaylistIndex && playingVideo != null)
-                playingVideoIndex = currentPlaylist.getIndexOf(playingVideo);
-
-            if (currentPlaylistIndex == cutVideoIndex && cutVideo != null)
-                cutVideoIndex = currentPlaylist.getIndexOf(cutVideo);
-
-            notifyItemMoved(fromPosition, toPosition);
-            notifyItemRangeChanged(positionMin, positionMax - positionMin + 1);
-
-        }
-
-        @Override
-        public void onRowSelected(RecyclerView.ViewHolder viewHolder) {
-            vibrator.vibrate(50);
-        }
-
-        @Override
-        public void onRowClear(RecyclerView.ViewHolder viewHolder) {
-        }
-    }
-
-    class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements ItemMoveCallback.ItemTouchHelperContract {
-        Integer[] icons = {
-                R.drawable.baseline_featured_play_list_24,
-                R.drawable.baseline_favorite_24,
-                R.drawable.baseline_library_music_24,
-                R.drawable.baseline_videogame_asset_24,
-                R.drawable.baseline_movie_creation_24};
-
-        @NonNull
-        @Override
-        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            LayoutInflater inf = getLayoutInflater();
-            View itemView = inf.inflate(R.layout.playlist_item, parent, false);
-            return new RecyclerView.ViewHolder(itemView) {};
-        }
-
-        @Override
-        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-            View itemView = holder.itemView;
-            int pos = holder.getAdapterPosition();
-
-            LinearLayout layout = itemView.findViewById(R.id.layout);
-            ImageView icon = itemView.findViewById(R.id.playlistIcon);
-            TextView title = itemView.findViewById(R.id.playlistTitle);
-            TextView size = itemView.findViewById(R.id.playlistSize);
-            ImageView options = itemView.findViewById(R.id.playlistOptions);
-
-            setItemOnClickListener(layout, pos);
-
-            layout.setBackgroundResource(playingPlaylistIndex == pos ? R.drawable.list_item_playing : R.drawable.list_item);
-
-            int iconIndex = listOfPlaylists.getPlaylistAt(pos).icon;
-            if (iconIndex > 4 || iconIndex < 0) iconIndex = 0;
-            icon.setImageResource(icons[iconIndex]);
-            title.setText(listOfPlaylists.getPlaylistAt(pos).title);
-            size.setText(String.valueOf(listOfPlaylists.getPlaylistAt(pos).getLength()).concat(" video"));
-            title.setTextColor(playingPlaylistIndex == pos ? Color.GREEN : Color.WHITE);
-
-            PopupMenu popupMenu = getPlaylistPopupMenu(options, false, pos);
-
-            options.setOnClickListener(view -> {
-                popupMenu.getMenu().getItem(2).setEnabled(cutPlaylistIndex != -1);
-                popupMenu.show();});
-        }
-
-        @Override
-        public int getItemCount() {
-            return listOfPlaylists.getLength();
-        }
-
-        public void insertItem(int index) {
-            if (playingPlaylist != null && index <= playingPlaylistIndex) {
-                playingPlaylistIndex = listOfPlaylists.getIndexOf(playingPlaylist);
-            }
-            if (cutPlaylistIndex != -1 && index <= cutPlaylistIndex) {
-                cutPlaylistIndex = listOfPlaylists.getIndexOf(cutPlaylist);
-            }
-            this.notifyItemInserted(index);
-            this.notifyItemRangeChanged(index, listOfPlaylists.getLength()-index);
-        }
-
-        public void removeItem(int index) {
-            if (playingPlaylist != null) {
-                if (index < playingPlaylistIndex) {
-                    playingPlaylistIndex = listOfPlaylists.getIndexOf(playingPlaylist);
-                }
-                if (index == playingPlaylistIndex) {
-                    closePlayer();
-                    playingPlaylist = null;
-               }
-            }
-            if (cutPlaylist != null) {
-                if (index < cutPlaylistIndex) {
-                    cutPlaylistIndex = listOfPlaylists.getIndexOf(cutPlaylist);
-                }
-                if (index == cutPlaylistIndex) {
-                    cutPlaylistIndex = -1;
-                    cutVideoIndex = -1;
-                }
-            }
-            this.notifyItemRemoved(index);
-            this.notifyItemRangeChanged(index, listOfPlaylists.getLength()-index);
-        }
-
-        private void setItemOnClickListener(View v, int position) {
-            v.setOnClickListener(view -> openPlaylist(position));
-        }
-
-        @Override
-        public void onRowMoved(int fromPosition, int toPosition) {
-            listOfPlaylists.movePlaylist(fromPosition, toPosition);
-            int positionMin = Math.min(fromPosition, toPosition);
-            int positionMax = Math.max(fromPosition, toPosition);
-
-            if (playingPlaylist != null)
-                playingPlaylistIndex = listOfPlaylists.getIndexOf(playingPlaylist);
-
-            if (cutPlaylist != null)
-                cutPlaylistIndex = listOfPlaylists.getIndexOf(cutPlaylist);
-
-            notifyItemMoved(fromPosition, toPosition);
-            notifyItemRangeChanged(positionMin, positionMax - positionMin + 1);
-        }
-
-        @Override
-        public void onRowSelected(RecyclerView.ViewHolder viewHolder) {
-            vibrator.vibrate(50);
-        }
-
-        @Override
-        public void onRowClear(RecyclerView.ViewHolder viewHolder) {
         }
     }
 }
