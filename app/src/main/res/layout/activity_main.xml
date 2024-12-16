@@ -18,8 +18,7 @@
         <com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
             android:id="@+id/youTubePlayerView"
             android:layout_width="match_parent"
-            android:layout_height="240dp"
-            android:layout_weight="1"
+            android:layout_height="wrap_content"
             android:visibility="gone"></com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView>
 
         <LinearLayout

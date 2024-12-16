@@ -8,5 +8,5 @@
         android:type="radial"
         android:gradientRadius="56dp"
         />
-    <corners android:radius="8dp"/>
+    <corners android:radius="16dp"/>
 </shape>

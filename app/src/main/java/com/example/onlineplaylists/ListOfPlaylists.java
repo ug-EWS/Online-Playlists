@@ -22,11 +22,6 @@ public class ListOfPlaylists {
         return this;
     }
 
-    public void addPlaylist(String title) {
-        Playlist p = new Playlist(title);
-        if (playlists.isEmpty()) playlists.add(p); else playlists.add(0, p);
-    }
-
     public void addPlaylist(Playlist p) {
         if (playlists.isEmpty()) playlists.add(p); else playlists.add(0, p);
     }

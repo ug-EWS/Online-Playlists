@@ -193,9 +193,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void handleOnBackPressed() {
                 if (isFullscreen) {
-                    isFullscreen = false;
-                    updateLayout();
-                    fullscreen.setImageResource(R.drawable.baseline_fullscreen_24);
+                    setFullscreen(false);
                 } else if (viewMode) {
                     setViewMode(false);
                 } else {
@@ -205,11 +203,11 @@ public class MainActivity extends AppCompatActivity {
         };
         getOnBackPressedDispatcher().addCallback(onBackPressedCallback);
         vibrator = (Vibrator)getSystemService(VIBRATOR_SERVICE);
-        isPortrait = true;
-        isFullscreen = false;
         areControlsVisible = true;
         setMusicControlsMode(musicControlsMode);
-        updateLayout();
+        setOrientation(true);
+        setFullscreen(false);
+        setControllerVisibility(false);
     }
 
     @Override
@@ -250,8 +248,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
-        isPortrait = newConfig.orientation == Configuration.ORIENTATION_PORTRAIT;
-        updateLayout();
+        setOrientation(newConfig.orientation == Configuration.ORIENTATION_PORTRAIT);
         super.onConfigurationChanged(newConfig);
     }
 
@@ -327,7 +324,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReady(@NonNull YouTubePlayer _youTubePlayer) {
                 youTubePlayer = _youTubePlayer;
-                if(serviceRunning) continuePlayback();
+                if (serviceRunning) continuePlayback();
             }
 
             @Override
@@ -342,7 +339,7 @@ public class MainActivity extends AppCompatActivity {
                         isPlaying = isPlayingNewValue;
                         playButton.setImageResource(isPlaying ? R.drawable.baseline_pause_24 : R.drawable.baseline_play_arrow_24);
                         videoPlay.setImageResource(isPlaying ? R.drawable.baseline_pause_24 : R.drawable.baseline_play_arrow_24);
-                        updateLayout();
+                        //updateLayout();
                         if (isPlaying) {
                         timer = new Timer();
                         timer.schedule(new TimerTask() {
@@ -452,9 +449,7 @@ public class MainActivity extends AppCompatActivity {
         });
         fullscreen = mainView.findViewById(R.id.fullscreen);
         fullscreen.setOnClickListener(v -> {
-            isFullscreen = !isFullscreen;
-            fullscreen.setImageResource(isFullscreen ? R.drawable.baseline_fullscreen_exit_24 : R.drawable.baseline_fullscreen_24);
-            updateLayout();
+            setFullscreen(!isFullscreen);
         });
         videoPrevious = mainView.findViewById(R.id.previous);
         videoPrevious.setOnClickListener(v -> playPrevious());
@@ -648,10 +643,9 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
             if (itemIndex == R.id.musicMode) {
-                musicMode = !musicMode;
+                setMusicMode(!musicMode);
                 item.setChecked(musicMode);
                 musicTitle.setSelected(musicMode);
-                updateLayout();
                 return false;
             }
             if (itemIndex == R.id.autoDisabled) {
@@ -772,8 +766,7 @@ public class MainActivity extends AppCompatActivity {
             playingVideo = playingPlaylist.getVideoAt(index);
             youTubePlayer.loadVideo(playingVideo.id, startSecond);
             musicTitle.setText(playingVideo.title);
-            showController = true;
-            updateLayout();
+            setControllerVisibility(true);
 
             if (switchPlaylist) {
                 if (oldPosition != -1) playlistRecycler.getAdapter().notifyItemChanged(oldPosition);
@@ -819,8 +812,7 @@ public class MainActivity extends AppCompatActivity {
         playingPlaylistIndex = -1;
         playingVideoIndex = -1;
         youTubePlayer.pause();
-        showController = false;
-        updateLayout();
+        setControllerVisibility(false);
     }
 
     private void showMessage(String text) {
@@ -856,10 +848,10 @@ public class MainActivity extends AppCompatActivity {
         forwardButton.setImageResource(musicControlsMode ? R.drawable.baseline_forward_5_24 : R.drawable.baseline_skip_next_24);
     }
 
-    private void updateLayout() {
-        musicController.setVisibility(showController && musicMode ? View.VISIBLE : View.GONE);
-        youTubePlayerView.setVisibility(showController && !musicMode ? View.VISIBLE : View.GONE);
-        setRequestedOrientation(isFullscreen ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_USER);
+    private void setFullscreen(boolean _fullscreen) {
+        isFullscreen = _fullscreen;
+        fullscreen.setImageResource(isFullscreen ? R.drawable.baseline_fullscreen_exit_24 : R.drawable.baseline_fullscreen_24);
+        setRequestedOrientation(isFullscreen ? ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_USER);
         list.setVisibility(isFullscreen ? View.GONE : View.VISIBLE);
         getWindow().getDecorView().setSystemUiVisibility(isFullscreen ? View.SYSTEM_UI_FLAG_FULLSCREEN : View.SYSTEM_UI_FLAG_VISIBLE);
         if (isFullscreen) {
@@ -869,15 +861,46 @@ public class MainActivity extends AppCompatActivity {
             addButton.show();
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         }
+        if (!isPortrait) {
+            OnlinePlaylistsUtils.setDimensions(context, youTubePlayerView, isFullscreen ? MATCH_PARENT : WRAP_CONTENT, MATCH_PARENT, 1);
+        }
+    }
+
+    private void setOrientation(boolean _isPortrait) {
+        isPortrait = _isPortrait;
         if (isPortrait) {
             layout.setOrientation(LinearLayout.VERTICAL);
-            OnlinePlaylistsUtils.setDimensions(context, youTubePlayerView, MATCH_PARENT, 240, 0);
+            OnlinePlaylistsUtils.setDimensions(context, youTubePlayerView, MATCH_PARENT, WRAP_CONTENT, 0);
             OnlinePlaylistsUtils.setDimensions(context, list, MATCH_PARENT, WRAP_CONTENT, 1);
         } else {
             layout.setOrientation(musicMode ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
-            OnlinePlaylistsUtils.setDimensions(context, youTubePlayerView, isFullscreen ? MATCH_PARENT : 480, MATCH_PARENT, 0);
-            OnlinePlaylistsUtils.setDimensions(context, list, musicMode ? MATCH_PARENT : WRAP_CONTENT, MATCH_PARENT, 1);
+            OnlinePlaylistsUtils.setDimensions(context, youTubePlayerView, isFullscreen ? MATCH_PARENT : WRAP_CONTENT, MATCH_PARENT, 1);
+            OnlinePlaylistsUtils.setDimensions(context, list, musicMode ? MATCH_PARENT : 300, MATCH_PARENT, 0);
         }
+        setShowThumbnails();
+    }
+
+    private void setControllerVisibility(boolean _showController) {
+        showController = _showController;
+        updateController();
+    }
+
+    private void setMusicMode(boolean _musicMode) {
+        musicMode = _musicMode;
+        if (!isPortrait) layout.setOrientation(musicMode ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
+        updateController();
+    }
+
+    private void updateController() {
+        musicController.setVisibility(showController && musicMode ? View.VISIBLE : View.GONE);
+        youTubePlayerView.setVisibility(showController && !musicMode ? View.VISIBLE : View.GONE);
+        if (!isPortrait) {
+            OnlinePlaylistsUtils.setDimensions(context, list, musicMode ? MATCH_PARENT : 300, MATCH_PARENT, 0);
+        }
+        setShowThumbnails();
+    }
+
+    private void setShowThumbnails() {
         boolean showThumbnailsNewValue = !(!isPortrait && showController && !musicMode);
         if (showThumbnails != showThumbnailsNewValue) {
             showThumbnails = showThumbnailsNewValue;
