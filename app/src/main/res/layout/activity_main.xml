@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
 
 
+    android:id="@+id/coordinatorLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/back"
@@ -176,6 +177,24 @@
                 android:paddingBottom="84dp">
 
             </androidx.recyclerview.widget.RecyclerView>
+
+            <TextView
+                android:id="@+id/noPlaylists"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="@string/no_playlists"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/noVideos"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="@string/no_videos"
+                android:textSize="16sp" />
 
         </LinearLayout>
 

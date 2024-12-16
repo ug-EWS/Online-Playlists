@@ -5,41 +5,26 @@ import static android.content.pm.PackageManager.PERMISSION_DENIED;
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.graphics.Color;
+import android.graphics.Canvas;
+import android.graphics.Rect;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.os.Vibrator;
-import android.os.VibratorManager;
 import android.provider.Settings;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.util.Log;
 import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.Window;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
-import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputMethodManager;
-import android.webkit.WebChromeClient;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
@@ -51,18 +36,16 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
-import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.FullscreenListener;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
 
@@ -73,12 +56,10 @@ import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import kotlin.Unit;
-import kotlin.jvm.functions.Function0;
-
 public class MainActivity extends AppCompatActivity {
     YouTubePlayer youTubePlayer;
 
+    private CoordinatorLayout coordinatorLayout;
     private YouTubePlayerView youTubePlayerView;
     private LinearLayout layout;
     private LinearLayout list;
@@ -114,6 +95,8 @@ public class MainActivity extends AppCompatActivity {
     private SeekBar speedBar;
     private ImageView videoPrevious;
     private ImageView videoNext;
+    private TextView noPlaylistsText;
+    private TextView noVideosText;
 
 
     ListOfPlaylistsAdapter listOfPlaylistsAdapter;
@@ -303,6 +286,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initializeUi() {
+        coordinatorLayout = findViewById(R.id.coordinatorLayout);
         youTubePlayerView = findViewById(R.id.youTubePlayerView);
         layout = findViewById(R.id.layoutMain);
         list = findViewById(R.id.list);
@@ -318,7 +302,6 @@ public class MainActivity extends AppCompatActivity {
         new ItemTouchHelper(new ItemMoveCallback(listOfPlaylistsAdapter)).attachToRecyclerView(listOfPlaylistsRecycler);
         playlistRecycler = findViewById(R.id.playlistRecycler);
         playlistRecycler.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
-        setViewMode(false);
 
         AbstractYouTubePlayerListener listener = new AbstractYouTubePlayerListener() {
             @Override
@@ -488,6 +471,10 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+        noPlaylistsText = findViewById(R.id.noPlaylists);
+        noVideosText = findViewById(R.id.noVideos);
+
+        setViewMode(false);
     }
 
     @NonNull PopupMenu getPlaylistPopupMenu(View anchor, boolean current, int index) {
@@ -822,8 +809,12 @@ public class MainActivity extends AppCompatActivity {
     private void setViewMode(boolean mode) {
         viewMode = mode;
         titleText.setText(viewMode? currentPlaylist.title : getString(R.string.app_name));
-        listOfPlaylistsRecycler.setVisibility(mode ? View.GONE : View.VISIBLE);
-        playlistRecycler.setVisibility(mode ? View.VISIBLE : View.GONE);
+
+        listOfPlaylistsRecycler.setVisibility(View.GONE);
+        noPlaylistsText.setVisibility(View.GONE);
+        playlistRecycler.setVisibility(View.GONE);
+        noVideosText.setVisibility(View.GONE);
+
         if (mode) {
             if (playlistAdapter == null) {
                 playlistAdapter = new PlaylistAdapter(this);
@@ -832,11 +823,18 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 playlistAdapter.notifyDataSetChanged();
             }
+            boolean noVideos = currentPlaylist.getLength() == 0;
+            playlistRecycler.setVisibility(noVideos ? View.GONE : View.VISIBLE);
+            noVideosText.setVisibility(noVideos ? View.VISIBLE : View.GONE);
         } else {
-            if(listOfPlaylistsAdapter != null) {
+            if (listOfPlaylistsAdapter != null) {
                 listOfPlaylistsAdapter.notifyDataSetChanged();
             }
+            boolean noPlaylists = listOfPlaylists.getLength() == 0;
+            listOfPlaylistsRecycler.setVisibility(noPlaylists ? View.GONE : View.VISIBLE);
+            noPlaylistsText.setVisibility(noPlaylists ? View.VISIBLE : View.GONE);
         }
+
         icon.setImageResource(viewMode ? R.drawable.baseline_arrow_back_24 : R.drawable.baseline_smart_display_24);
         icon.setClickable(viewMode);
         options.setVisibility(mode ? View.VISIBLE : View.GONE);
@@ -853,13 +851,25 @@ public class MainActivity extends AppCompatActivity {
         fullscreen.setImageResource(isFullscreen ? R.drawable.baseline_fullscreen_exit_24 : R.drawable.baseline_fullscreen_24);
         setRequestedOrientation(isFullscreen ? ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_USER);
         list.setVisibility(isFullscreen ? View.GONE : View.VISIBLE);
-        getWindow().getDecorView().setSystemUiVisibility(isFullscreen ? View.SYSTEM_UI_FLAG_FULLSCREEN : View.SYSTEM_UI_FLAG_VISIBLE);
-        if (isFullscreen) {
-            addButton.hide();
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            coordinatorLayout.setFitsSystemWindows(!_fullscreen);
+            getWindow().getInsetsController().setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            if (isFullscreen) {
+                addButton.hide();
+                getWindow().getInsetsController().hide(WindowInsets.Type.statusBars()|WindowInsets.Type.navigationBars());
+            } else {
+                addButton.show();
+                getWindow().getInsetsController().show(WindowInsets.Type.systemBars()|WindowInsets.Type.navigationBars());
+            }
         } else {
-            addButton.show();
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+            getWindow().getDecorView().setSystemUiVisibility(isFullscreen ? View.SYSTEM_UI_FLAG_FULLSCREEN : View.SYSTEM_UI_FLAG_VISIBLE);
+            if (isFullscreen) {
+                addButton.hide();
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+            } else {
+                addButton.show();
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+            }
         }
         if (!isPortrait) {
             OnlinePlaylistsUtils.setDimensions(context, youTubePlayerView, isFullscreen ? MATCH_PARENT : WRAP_CONTENT, MATCH_PARENT, 1);

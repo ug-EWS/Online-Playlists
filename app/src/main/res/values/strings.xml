@@ -54,5 +54,8 @@
     <string name="import_fail">Playlist import failed.</string>
     <string name="music_start_point_set">Music start point has been set.</string>
 
+    <string name="no_playlists">There are no playlists.\n\nTap the \"+\" button\nto add a playlist.</string>
+    <string name="no_videos">The playlist is empty.\n\nTap the \"+\" button\nto add a video.</string>
+
 
 </resources>
