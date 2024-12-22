@@ -12,11 +12,18 @@
     </group>
     <group>
         <item
+            android:id="@+id/addToPlaylist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:title="Oynatma listesine ekle" />
+        <item
             android:id="@+id/cut"
-            android:title="@string/cut" />
+            android:title="@string/cut"
+            android:visible="false" />
         <item
             android:id="@+id/copy"
-            android:title="@string/copy" />
+            android:title="@string/copy"
+            android:visible="false" />
         <item
             android:id="@+id/openInYouTube"
             android:title="@string/open_in_youtube" />

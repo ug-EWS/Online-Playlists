@@ -33,6 +33,7 @@ import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
@@ -85,8 +86,6 @@ public class MainActivity extends AppCompatActivity {
     private SeekBar seekBar;
     private ImageView openInYouTube;
     private ImageView fullscreen;
-    private LinearLayout controls1;
-    private LinearLayout controls2;
     private ImageView speed;
     private LinearLayout bottomMainControls;
     private LinearLayout speedControls;
@@ -100,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     ListOfPlaylistsAdapter listOfPlaylistsAdapter;
-    private PlaylistAdapter playlistAdapter;
+    PlaylistAdapter playlistAdapter;
 
     ListOfPlaylists listOfPlaylists;
 
@@ -368,7 +367,7 @@ public class MainActivity extends AppCompatActivity {
         View mainView = youTubePlayerView.inflateCustomPlayerUi(R.layout.video_controller);
 
         addButton.setOnClickListener(view -> {
-            if (viewMode) videoDialog.show(0); else playlistDialog.show(0);
+            if (viewMode) videoDialog.show(); else playlistDialog.show();
         });
 
         icon.setOnClickListener(view -> setViewMode(false));
@@ -438,8 +437,6 @@ public class MainActivity extends AppCompatActivity {
         videoPrevious.setOnClickListener(v -> playPrevious());
         videoNext = mainView.findViewById(R.id.next);
         videoNext.setOnClickListener(v -> playNext());
-        controls1 = mainView.findViewById(R.id.controls1);
-        controls2 = mainView.findViewById(R.id.controls2);
         speed = mainView.findViewById(R.id.speed);
         speed.setOnClickListener(v -> {
             bottomMainControls.setVisibility(View.GONE);
@@ -479,6 +476,7 @@ public class MainActivity extends AppCompatActivity {
 
     @NonNull PopupMenu getPlaylistPopupMenu(View anchor, boolean current, int index) {
         PopupMenu menu = new PopupMenu(context, anchor);
+        Playlist forPlaylist = listOfPlaylists.getPlaylistAt(index);
         menu.inflate(R.menu.playlist_options);
         for (int i = 0; i < 2; i++) menu.getMenu().getItem(i).setVisible(!current);
         menu.setOnMenuItemClickListener(item -> {
@@ -517,16 +515,16 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
             if (itemIndex == R.id.share) {
-                sharePlaylist(listOfPlaylists.getPlaylistAt(index));
+                sharePlaylist(forPlaylist);
                 return true;
             }
             if (itemIndex == R.id.delete) {
                 AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this, R.style.Theme_OnlinePlaylistsDialogDark);
-                b.setTitle(listOfPlaylists.getPlaylistAt(index).title);
+                b.setTitle(forPlaylist.title);
                 b.setMessage(getString(R.string.delete_playlist_alert));
                 b.setPositiveButton(getString(R.string.dialog_button_delete) , ((dialog, which) -> {
                     listOfPlaylists.removePlaylist(index);
-                    if(!current) {
+                    if (!current) {
                         listOfPlaylistsAdapter.removeItem(index);
                     }
                     dialog.dismiss();
@@ -542,6 +540,7 @@ public class MainActivity extends AppCompatActivity {
 
     @NonNull PopupMenu getVideoPopupMenu(View anchor, int index) {
         PopupMenu menu = new PopupMenu(context, anchor);
+        YouTubeVideo forVideo = currentPlaylist.getVideoAt(index);
         menu.inflate(R.menu.video_options);
         menu.setOnMenuItemClickListener(item -> {
             int itemIndex = item.getItemId();
@@ -572,12 +571,12 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
             if (itemIndex == R.id.openInYouTube) {
-                openVideoInYoutube(currentPlaylist.getVideoAt(index));
+                openVideoInYoutube(forVideo);
                 return true;
             }
             if (itemIndex == R.id.delete) {
                 AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this, R.style.Theme_OnlinePlaylistsDialogDark);
-                b.setTitle(currentPlaylist.getVideoAt(index).title);
+                b.setTitle(forVideo.title);
                 b.setMessage(getString(R.string.delete_video_alert));
                 b.setPositiveButton(getString(R.string.dialog_button_delete), ((dialog, which) -> {
                     currentPlaylist.removeVideo(index);
@@ -586,6 +585,10 @@ public class MainActivity extends AppCompatActivity {
                 }));
                 b.setNegativeButton(getString(R.string.dialog_button_no), ((dialog, which) -> dialog.dismiss()));
                 b.create().show();
+                return true;
+            }
+            if (itemIndex == R.id.addToPlaylist) {
+                new ManagePlaylistsDialog(this, forVideo).show();
                 return true;
             }
             return false;
@@ -751,7 +754,6 @@ public class MainActivity extends AppCompatActivity {
 
             playingVideoIndex = index;
             playingVideo = playingPlaylist.getVideoAt(index);
-            youTubePlayer.loadVideo(playingVideo.id, startSecond);
             musicTitle.setText(playingVideo.title);
             setControllerVisibility(true);
 
@@ -759,6 +761,8 @@ public class MainActivity extends AppCompatActivity {
                 if (oldPosition != -1) playlistRecycler.getAdapter().notifyItemChanged(oldPosition);
                 playlistRecycler.getAdapter().notifyItemChanged(index);
             }
+
+            youTubePlayer.loadVideo(playingVideo.id, startSecond);
         }
     }
 
@@ -802,7 +806,7 @@ public class MainActivity extends AppCompatActivity {
         setControllerVisibility(false);
     }
 
-    private void showMessage(String text) {
+    void showMessage(String text) {
         Toast.makeText(context, text, Toast.LENGTH_SHORT).show();
     }
 

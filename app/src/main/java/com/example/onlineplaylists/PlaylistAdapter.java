@@ -61,6 +61,7 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
     public int getItemCount() {
         return activity.currentPlaylist.getLength();
     }
+
     public void insertItem(int index) {
         if (activity.playingVideoIndex != -1 && index <= activity.playingVideoIndex && activity.currentPlaylistIndex == activity.playingPlaylistIndex) {
             activity.playingVideoIndex++;
@@ -72,6 +73,7 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
         this.notifyItemInserted(index);
         this.notifyItemRangeChanged(index, activity.listOfPlaylists.getLength()-index);
     }
+
     public void removeItem(int index) {
         if (activity.playingVideo != null && activity.currentPlaylistIndex == activity.playingPlaylistIndex) {
             if (index < activity.playingVideoIndex) {
@@ -93,11 +95,13 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
         this.notifyItemRemoved(index);
         this.notifyItemRangeChanged(index, activity.listOfPlaylists.getLength()-index);
     }
+
     private void setItemOnClickListener(View v, int position) {
         v.setOnClickListener(view -> {
             if ((activity.currentPlaylistIndex == activity.playingPlaylistIndex && position == activity.playingVideoIndex))
                 if (activity.isPlaying) activity.youTubePlayer.pause(); else activity.youTubePlayer.play();
-            else activity.playVideo(position, true);});
+            else activity.playVideo(position, true);
+        });
     }
 
     @Override

@@ -67,14 +67,20 @@ class VideoDialog {
                 forwardButton.setVisibility(webView.canGoForward() ? View.VISIBLE : View.GONE);
             }
         });
+        webView.loadUrl("https://m.youtube.com");
 
         addButton.setOnClickListener(view -> {
             String id = YouTubeVideo.getVideoIdFrom(url);
-            title = title.replace(" - YouTube","");
-            activity.currentPlaylist.addVideoTo(new YouTubeVideo(title, id), whereToAdd);
-            PlaylistAdapter a = (PlaylistAdapter) activity.playlistRecycler.getAdapter();
-            a.insertItem(whereToAdd);
-            dismiss();
+            if (activity.currentPlaylist.contains(id)) {
+                activity.showMessage("Bu video zaten eklenmiş.");
+            }
+            else {
+                title = title.replace(" - YouTube", "");
+                activity.currentPlaylist.addVideoTo(new YouTubeVideo(title, id), whereToAdd);
+                PlaylistAdapter a = (PlaylistAdapter) activity.playlistRecycler.getAdapter();
+                a.insertItem(whereToAdd);
+                dismiss();
+            }
         });
 
         cancelButton.setOnClickListener(view -> dismiss());
@@ -115,10 +121,14 @@ class VideoDialog {
         dialog.setView(dialogView);
 
     }
+
+    public void show() {
+        show(0);
+    }
+
     public void show(int _whereToAdd) {
         whereToAdd = _whereToAdd;
         webView.onResume();
-        //webView.resumeTimers();
         webView.reload();
         dialog.show();
     }
@@ -126,7 +136,6 @@ class VideoDialog {
     private void dismiss() {
         webView.setEnabled(false);
         webView.onPause();
-        //webView.pauseTimers();
         webView.reload();
         dialog.dismiss();
     }

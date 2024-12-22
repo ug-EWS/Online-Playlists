@@ -157,8 +157,7 @@
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/listOfPlaylistsRecycler"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
+                android:layout_height="match_parent"
                 android:clipToPadding="false"
                 android:paddingBottom="84dp"
                 android:scrollbarAlwaysDrawVerticalTrack="true"
@@ -171,18 +170,18 @@
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/playlistRecycler"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
+                android:layout_height="match_parent"
                 android:clipToPadding="false"
-                android:paddingBottom="84dp">
+                android:paddingBottom="84dp"
+                android:scrollbarAlwaysDrawVerticalTrack="true"
+                android:scrollbars="vertical">
 
             </androidx.recyclerview.widget.RecyclerView>
 
             <TextView
                 android:id="@+id/noPlaylists"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
+                android:layout_height="match_parent"
                 android:gravity="center"
                 android:text="@string/no_playlists"
                 android:textSize="16sp" />
@@ -190,8 +189,7 @@
             <TextView
                 android:id="@+id/noVideos"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
+                android:layout_height="match_parent"
                 android:gravity="center"
                 android:text="@string/no_videos"
                 android:textSize="16sp" />

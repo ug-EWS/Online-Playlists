@@ -14,7 +14,8 @@
         <item
             android:id="@+id/paste"
             android:enabled="false"
-            android:title="@string/paste" />
+            android:title="@string/paste"
+            android:visible="false" />
         <item
             android:id="@+id/edit"
             android:title="@string/edit" />

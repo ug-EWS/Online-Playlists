@@ -88,6 +88,21 @@ public class Playlist {
         return videos.size();
     }
 
+    public boolean contains(YouTubeVideo _video) {
+        return contains(_video.id);
+    }
+
+    public boolean contains(String _id) {
+        boolean _contains = false;
+        for (YouTubeVideo i : videos) {
+            if (i.id.equals(_id)) {
+                _contains = true;
+                break;
+            }
+        }
+        return _contains;
+    }
+
     public String getJson(){
         HashMap<String, Object> map = new HashMap<>();
         ArrayList<String> list = new ArrayList<>();

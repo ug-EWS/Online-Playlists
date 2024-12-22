@@ -60,6 +60,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:background="@drawable/icon_selector"
                 android:padding="16dp"
                 app:srcCompat="@drawable/baseline_featured_play_list_24" />
 
@@ -68,6 +69,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:background="@drawable/icon_selector"
                 android:padding="16dp"
                 app:srcCompat="@drawable/baseline_favorite_24" />
 
@@ -76,6 +78,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:background="@drawable/icon_selector"
                 android:padding="16dp"
                 app:srcCompat="@drawable/baseline_library_music_24" />
 
@@ -84,6 +87,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:background="@drawable/icon_selector"
                 android:padding="16dp"
                 app:srcCompat="@drawable/baseline_videogame_asset_24" />
 
@@ -92,6 +96,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:background="@drawable/icon_selector"
                 android:padding="16dp"
                 app:srcCompat="@drawable/baseline_movie_creation_24" />
         </LinearLayout>

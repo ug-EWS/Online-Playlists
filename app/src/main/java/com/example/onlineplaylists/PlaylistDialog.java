@@ -29,10 +29,10 @@ class PlaylistDialog {
         View.OnClickListener onClickListener = view -> {
             selectedIcon = iconSelector.indexOfChild(view);
             for (int i = 0; i < 5; i++) {
-                iconSelector.getChildAt(i).setBackgroundColor(
+                iconSelector.getChildAt(i).setBackgroundResource(
                         i == selectedIcon
-                                ? activity.getResources().getColor(R.color.soft_red, activity.getTheme())
-                                : Color.TRANSPARENT
+                                ? R.drawable.icon_selector_1
+                                : R.drawable.icon_selector
                 );
             }
         };
@@ -54,9 +54,7 @@ class PlaylistDialog {
         boolean _newPlaylist = _forPlaylist == -1;
         builder.setTitle(activity.getString(_newPlaylist ? R.string.add_playlist : R.string.edit_playlist));
         if (_newPlaylist) {
-            iconSelector.getChildAt(0).setBackgroundColor(
-                    activity.getResources().getColor(R.color.soft_red,
-                            activity.getTheme()));
+            iconSelector.getChildAt(0).setBackgroundResource(R.drawable.icon_selector_1);
             builder.setPositiveButton(activity.getString(R.string.dialog_button_add), (dialog, which) -> {
                 String text = editText.getText().toString();
                 if (text.isEmpty()) text = editText.getHint().toString();
@@ -69,7 +67,7 @@ class PlaylistDialog {
             editText.setText(toEdit.title);
             selectedIcon = toEdit.icon;
             if (selectedIcon > 4 || selectedIcon < 0) selectedIcon = 0;
-            iconSelector.getChildAt(selectedIcon).setBackgroundColor(activity.getResources().getColor(R.color.soft_red, activity.getTheme()));
+            iconSelector.getChildAt(selectedIcon).setBackgroundResource(R.drawable.icon_selector_1);
             builder.setPositiveButton(activity.getString(R.string.dialog_button_apply), (dialog, which) -> {
                 String text = editText.getText().toString();
                 toEdit.title = text;
@@ -83,7 +81,7 @@ class PlaylistDialog {
     }
 
     public void show() {
-        dialog.show();
+        show(0);
     }
 
     public void show(int _whereToAdd) {
