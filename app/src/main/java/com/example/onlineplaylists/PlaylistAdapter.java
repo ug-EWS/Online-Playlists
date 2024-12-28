@@ -1,10 +1,10 @@
 package com.example.onlineplaylists;
 
-import android.content.Context;
 import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -14,6 +14,8 @@ import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+
+import java.util.ArrayList;
 
 class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements ItemMoveCallback.ItemTouchHelperContract {
     MainActivity activity;
@@ -40,8 +42,10 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
         TextView title = itemView.findViewById(R.id.videoTitle);
         ImageView options = itemView.findViewById(R.id.videoOptions);
         CardView card = itemView.findViewById(R.id.card);
+        CheckBox checkBox = itemView.findViewById(R.id.checkBox);
 
         setItemOnClickListener(itemView, pos);
+        setItemOnLongClickListener(itemView, pos);
 
         itemView.setBackgroundResource(activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.playingVideoIndex == pos
                 ? R.drawable.list_item_playing
@@ -52,6 +56,9 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
         title.setTextColor(activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.playingVideoIndex == pos ? Color.GREEN : Color.WHITE);
         Glide.with(activity).load(thisVideo.getThumbnailUrl()).into(thumbnail);
         card.setVisibility(activity.showThumbnails ? View.VISIBLE : View.GONE);
+        options.setVisibility(activity.selectionMode || activity.listSortMode ? View.GONE : View.VISIBLE);
+        checkBox.setVisibility(activity.selectionMode ? View.VISIBLE : View.GONE);
+        checkBox.setChecked(activity.selectedItems.contains(position));
 
         PopupMenu popupMenu = activity.getVideoPopupMenu(options, pos);
         options.setOnClickListener(view -> popupMenu.show());
@@ -67,9 +74,7 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
             activity.playingVideoIndex++;
             activity.playingVideo = activity.currentPlaylist.getVideoAt(activity.playingVideoIndex);
         }
-        if (activity.cutVideo != null && index <= activity.cutVideoIndex && activity.currentPlaylistIndex == activity.cutPlaylistIndex) {
-            activity.cutVideoIndex = activity.currentPlaylist.getIndexOf(activity.cutVideo);
-        }
+
         this.notifyItemInserted(index);
         this.notifyItemRangeChanged(index, activity.listOfPlaylists.getLength()-index);
     }
@@ -83,25 +88,52 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
                 activity.closePlayer();
             }
         }
-        if (activity.cutVideo != null && activity.currentPlaylistIndex == activity.cutPlaylistIndex) {
-            if (index < activity.cutVideoIndex) {
-                activity.cutVideoIndex = activity.currentPlaylist.getIndexOf(activity.cutVideo);
-            }
-            if (index == activity.cutVideoIndex) {
-                activity.cutPlaylist = null;
-                activity.cutVideo = null;
-            }
-        }
+
         this.notifyItemRemoved(index);
         this.notifyItemRangeChanged(index, activity.listOfPlaylists.getLength()-index);
     }
 
     private void setItemOnClickListener(View v, int position) {
         v.setOnClickListener(view -> {
-            if ((activity.currentPlaylistIndex == activity.playingPlaylistIndex && position == activity.playingVideoIndex))
-                if (activity.isPlaying) activity.youTubePlayer.pause(); else activity.youTubePlayer.play();
-            else activity.playVideo(position, true);
+            if (activity.selectionMode) {
+                if (activity.selectedItems.contains(position))
+                    activity.selectedItems.remove((Integer) position);
+                else activity.selectedItems.add(position);
+                if (activity.selectedItems.isEmpty()) {
+                    activity.setSelectionMode(false);
+                } else {
+                    notifyItemChanged(position);
+                    activity.updateToolbar();
+                }
+            }
+            else {
+                if ((activity.currentPlaylistIndex == activity.playingPlaylistIndex && position == activity.playingVideoIndex))
+                    if (activity.isPlaying) activity.youTubePlayer.pause();
+                    else activity.youTubePlayer.play();
+                else activity.playVideo(position, true);
+            }
         });
+    }
+
+    private void setItemOnLongClickListener(View _view, int position) {
+        _view.setOnLongClickListener(view -> {
+            if (!(activity.selectionMode || activity.listSortMode)) {
+                activity.selectedItems = new ArrayList<>();
+                activity.selectedItems.add(position);
+                activity.setSelectionMode(true);
+            }
+            return true;
+        });
+    }
+
+    @Override
+    public boolean isSwipeEnabled() {
+        return !activity.selectionMode;
+    }
+
+    @Override
+    public boolean isDragEnabled() {
+        return activity.listSortMode;
     }
 
     @Override
@@ -113,9 +145,6 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
 
         if (activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.playingVideo != null)
             activity.playingVideoIndex = activity.currentPlaylist.getIndexOf(activity.playingVideo);
-
-        if (activity.currentPlaylistIndex == activity.cutVideoIndex && activity.cutVideo != null)
-            activity.cutVideoIndex = activity.currentPlaylist.getIndexOf(activity.cutVideo);
 
         notifyItemMoved(fromPosition, toPosition);
         notifyItemRangeChanged(positionMin, positionMax - positionMin + 1);
@@ -129,5 +158,10 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
 
     @Override
     public void onRowClear(RecyclerView.ViewHolder viewHolder) {
+    }
+
+    @Override
+    public void onSwipe(@NonNull RecyclerView.ViewHolder viewHolder, int i) {
+        activity.removeVideo(viewHolder.getAdapterPosition());
     }
 }

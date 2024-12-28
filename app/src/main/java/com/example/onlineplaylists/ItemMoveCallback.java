@@ -8,31 +8,30 @@ public class ItemMoveCallback extends ItemTouchHelper.Callback {
 
     private final ItemTouchHelperContract adapter;
 
-    public ItemMoveCallback(ItemTouchHelperContract _adapter) {
+    ItemMoveCallback(ItemTouchHelperContract _adapter) {
         adapter = _adapter;
     }
 
     @Override
     public boolean isLongPressDragEnabled() {
-        return true;
+        return adapter.isDragEnabled();
     }
 
     @Override
     public boolean isItemViewSwipeEnabled() {
-        return false;
+        return adapter.isSwipeEnabled();
     }
-
-
 
     @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int i) {
+        adapter.onSwipe(viewHolder, i);
     }
 
     @Override
     public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
         int dragFlags = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
         int swipeFlags = ItemTouchHelper.START | ItemTouchHelper.END;
-        return makeMovementFlags(dragFlags, 0);
+        return makeMovementFlags(dragFlags, swipeFlags);
     }
 
     @Override
@@ -56,10 +55,12 @@ public class ItemMoveCallback extends ItemTouchHelper.Callback {
     }
 
     interface ItemTouchHelperContract {
-
+        boolean isDragEnabled();
+        boolean isSwipeEnabled();
         void onRowMoved(int fromPosition, int toPosition);
         void onRowSelected(RecyclerView.ViewHolder myViewHolder);
         void onRowClear(RecyclerView.ViewHolder myViewHolder);
+        void onSwipe(@NonNull RecyclerView.ViewHolder viewHolder, int i);
 
     }
 }

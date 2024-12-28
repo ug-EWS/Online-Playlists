@@ -4,13 +4,15 @@ import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.recyclerview.widget.RecyclerView;
+
+import java.util.ArrayList;
 
 class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements ItemMoveCallback.ItemTouchHelperContract {
     MainActivity activity;
@@ -40,15 +42,18 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         View itemView = holder.itemView;
         int pos = holder.getAdapterPosition();
 
-        LinearLayout layout = itemView.findViewById(R.id.layout);
         ImageView icon = itemView.findViewById(R.id.playlistIcon);
         TextView title = itemView.findViewById(R.id.playlistTitle);
         TextView size = itemView.findViewById(R.id.playlistSize);
         ImageView options = itemView.findViewById(R.id.playlistOptions);
+        CheckBox checkBox = itemView.findViewById(R.id.checkBox);
 
-        setItemOnClickListener(layout, pos);
+        setItemOnClickListener(itemView, pos);
+        setItemOnLongClickListener(itemView, pos);
 
-        layout.setBackgroundResource(activity.playingPlaylistIndex == pos ? R.drawable.list_item_playing : R.drawable.list_item);
+        itemView.setBackgroundResource(
+                activity.playingPlaylistIndex == pos ? R.drawable.list_item_playing
+                        : R.drawable.list_item);
 
         int iconIndex = activity.listOfPlaylists.getPlaylistAt(pos).icon;
         if (iconIndex > 4 || iconIndex < 0) iconIndex = 0;
@@ -57,11 +62,15 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         size.setText(String.valueOf(activity.listOfPlaylists.getPlaylistAt(pos).getLength()).concat(" video"));
         title.setTextColor(activity.playingPlaylistIndex == pos ? Color.GREEN : Color.WHITE);
 
+        checkBox.setVisibility(activity.selectionMode ? View.VISIBLE : View.GONE);
+        checkBox.setChecked(activity.selectedItems.contains(position));
+        options.setVisibility(activity.selectionMode || activity.listSortMode ? View.GONE : View.VISIBLE);
+
         PopupMenu popupMenu = activity.getPlaylistPopupMenu(options, false, pos);
 
         options.setOnClickListener(view -> {
-            popupMenu.getMenu().getItem(2).setEnabled(activity.cutPlaylistIndex != -1);
-            popupMenu.show();});
+            popupMenu.show();
+        });
     }
 
     @Override
@@ -72,9 +81,6 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     public void insertItem(int index) {
         if (activity.playingPlaylist != null && index <= activity.playingPlaylistIndex) {
             activity.playingPlaylistIndex = activity.listOfPlaylists.getIndexOf(activity.playingPlaylist);
-        }
-        if (activity.cutPlaylistIndex != -1 && index <= activity.cutPlaylistIndex) {
-            activity.cutPlaylistIndex = activity.listOfPlaylists.getIndexOf(activity.cutPlaylist);
         }
         this.notifyItemInserted(index);
         this.notifyItemRangeChanged(index, activity.listOfPlaylists.getLength()-index);
@@ -90,21 +96,45 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                 activity.playingPlaylist = null;
             }
         }
-        if (activity.cutPlaylist != null) {
-            if (index < activity.cutPlaylistIndex) {
-                activity.cutPlaylistIndex = activity.listOfPlaylists.getIndexOf(activity.cutPlaylist);
-            }
-            if (index == activity.cutPlaylistIndex) {
-                activity.cutPlaylistIndex = -1;
-                activity.cutVideoIndex = -1;
-            }
-        }
         this.notifyItemRemoved(index);
         this.notifyItemRangeChanged(index, activity.listOfPlaylists.getLength()-index);
     }
 
     private void setItemOnClickListener(View v, int position) {
-        v.setOnClickListener(view -> activity.openPlaylist(position));
+        v.setOnClickListener(view -> {
+            if (activity.selectionMode) {
+                if (activity.selectedItems.contains(position))
+                    activity.selectedItems.remove((Integer) position);
+                else activity.selectedItems.add(position);
+                if (activity.selectedItems.isEmpty()) {
+                    activity.setSelectionMode(false);
+                } else {
+                    notifyItemChanged(position);
+                    activity.updateToolbar();
+                }
+            }
+            else activity.openPlaylist(position);
+        });
+    }
+    private void setItemOnLongClickListener(View _view, int position) {
+        _view.setOnLongClickListener(view -> {
+            if (!(activity.selectionMode || activity.listSortMode)) {
+                activity.selectedItems = new ArrayList<>();
+                activity.selectedItems.add(position);
+                activity.setSelectionMode(true);
+            }
+            return true;
+        });
+    }
+
+    @Override
+    public boolean isSwipeEnabled() {
+        return !activity.selectionMode;
+    }
+
+    @Override
+    public boolean isDragEnabled() {
+        return activity.listSortMode;
     }
 
     @Override
@@ -115,9 +145,6 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
         if (activity.playingPlaylist != null)
             activity.playingPlaylistIndex = activity.listOfPlaylists.getIndexOf(activity.playingPlaylist);
-
-        if (activity.cutPlaylist != null)
-            activity.cutPlaylistIndex = activity.listOfPlaylists.getIndexOf(activity.cutPlaylist);
 
         notifyItemMoved(fromPosition, toPosition);
         notifyItemRangeChanged(positionMin, positionMax - positionMin + 1);
@@ -130,5 +157,10 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     @Override
     public void onRowClear(RecyclerView.ViewHolder viewHolder) {
+    }
+
+    @Override
+    public void onSwipe(@NonNull RecyclerView.ViewHolder viewHolder, int i) {
+        activity.removePlaylist(viewHolder.getAdapterPosition());
     }
 }

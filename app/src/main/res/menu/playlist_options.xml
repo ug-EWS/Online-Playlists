@@ -13,9 +13,16 @@
     <group >
         <item
             android:id="@+id/paste"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:enabled="false"
             android:title="@string/paste"
             android:visible="false" />
+        <item
+            android:id="@+id/sort"
+            android:enabled="true"
+            android:title="Videoları sırala"
+            android:visible="true" />
         <item
             android:id="@+id/edit"
             android:title="@string/edit" />

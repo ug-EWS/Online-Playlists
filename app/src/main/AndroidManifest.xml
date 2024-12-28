@@ -35,6 +35,8 @@
                 <data android:scheme="content" />
                 <data android:host="*"/>
                 <data android:mimeType="*/*"/>
+                <data android:pathPattern=".*.opl"/>
+                <!-->
                 <data android:pathPattern=".*\\.opl" />
                 <data android:pathPattern=".*\\..*\\.opl" />
                 <data android:pathPattern=".*\\..*\\..*\\.opl" />
@@ -44,6 +46,8 @@
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.opl" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.opl" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.opl" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.opl" />
+                <!-->
             </intent-filter>
         </activity>
         <service android:name=".PlaybackService"

@@ -9,10 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.graphics.Canvas;
-import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -33,7 +30,6 @@ import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
@@ -62,55 +58,30 @@ public class MainActivity extends AppCompatActivity {
 
     private CoordinatorLayout coordinatorLayout;
     private YouTubePlayerView youTubePlayerView;
-    private LinearLayout layout;
-    private LinearLayout list;
-    private ImageView icon;
-    TextView titleText;
-    private FloatingActionButton addButton;
-    private ImageView options;
-    private ImageView settings;
-    private RecyclerView listOfPlaylistsRecycler;
-    RecyclerView playlistRecycler;
-    private PopupMenu settingsPopupMenu;
-    private LinearLayout musicController;
-    private TextView musicTitle;
-    private ImageView replayButton;
-    private ImageView playButton;
-    private ImageView forwardButton;
+    private LinearLayout layout, list, musicController, bottomMainControls, speedControls;
     private ConstraintLayout videoController;
-    private ImageView videoReplay;
-    private ImageView videoPlay;
-    private ImageView videoForward;
-    private TextView videoCurrent;
-    private TextView videoLength;
-    private SeekBar seekBar;
-    private ImageView openInYouTube;
-    private ImageView fullscreen;
-    private ImageView speed;
-    private LinearLayout bottomMainControls;
-    private LinearLayout speedControls;
-    private ImageView speedBack;
-    private TextView speedText;
-    private SeekBar speedBar;
-    private ImageView videoPrevious;
-    private ImageView videoNext;
-    private TextView noPlaylistsText;
-    private TextView noVideosText;
-
+    private ImageView icon, options, settings, selectAllButton, removeButton, addToPlaylistButton,
+            replayButton, playButton, forwardButton, videoReplay, videoPlay, videoForward,
+            openInYouTube, speed, fullscreen, speedBack, videoPrevious, videoNext;
+    private TextView musicTitle, videoCurrent, videoLength, speedText, noPlaylistsText, noVideosText;
+    private FloatingActionButton addButton;
+    private SeekBar seekBar, speedBar;
+    private RecyclerView listOfPlaylistsRecycler;
+    private PopupMenu settingsPopupMenu, listOfPlaylistsPopupMenu;
+    TextView titleText;
+    RecyclerView playlistRecycler;
 
     ListOfPlaylistsAdapter listOfPlaylistsAdapter;
     PlaylistAdapter playlistAdapter;
+    ItemTouchHelper listOfPlaylistsItemTouchHelper, playlistItemTouchHelper;
 
     ListOfPlaylists listOfPlaylists;
-
-    Playlist currentPlaylist, playingPlaylist, cutPlaylist;
-    YouTubeVideo playingVideo, cutVideo;
+    Playlist currentPlaylist, playingPlaylist;
+    YouTubeVideo playingVideo;
 
     int currentPlaylistIndex = -1,
             playingPlaylistIndex = -1,
             playingVideoIndex = -1,
-            cutPlaylistIndex = -1,
-            cutVideoIndex = -1,
             playMode = 0,
             currentSecond = 0,
             videoDuration = 0,
@@ -122,20 +93,12 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences sp;
     private SharedPreferences.Editor spe;
 
-    boolean viewMode;
-    private boolean isPortrait;
-    private boolean isFullscreen;
-    boolean isPlaying;
-    private boolean cut;
-    private boolean shuffle;
-    private boolean musicMode;
-    private boolean showController;
-    private boolean serviceRunning;
-    private boolean areControlsVisible;
-    boolean showThumbnails;
-    private boolean musicControlsMode;
+    boolean viewMode, isPlaying, showThumbnails, listSortMode, selectionMode;
+    private boolean isPortrait, isFullscreen, shuffle, musicMode, showController, serviceRunning,
+            areControlsVisible, musicControlsMode;
 
     private ArrayList<Integer> playlistIndexes;
+    ArrayList<Integer> selectedItems;
 
     private final Context context = MainActivity.this;
 
@@ -169,18 +132,13 @@ public class MainActivity extends AppCompatActivity {
         videoDialog = new VideoDialog(this);
 
         playlistIndexes = new ArrayList<>();
+        selectedItems = new ArrayList<>();
 
         initializeUi();
         OnBackPressedCallback onBackPressedCallback = new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (isFullscreen) {
-                    setFullscreen(false);
-                } else if (viewMode) {
-                    setViewMode(false);
-                } else {
-                    finish();
-                }
+                back();
             }
         };
         getOnBackPressedDispatcher().addCallback(onBackPressedCallback);
@@ -192,15 +150,27 @@ public class MainActivity extends AppCompatActivity {
         setControllerVisibility(false);
     }
 
+    private void back() {
+        if (isFullscreen) {
+            setFullscreen(false);
+        } else if (listSortMode) {
+            setListSortMode(false);
+        } else if (selectionMode) {
+            setSelectionMode(false);
+        } else if (viewMode) {
+            setViewMode(false);
+        } else {
+            finish();
+        }
+    }
+
     @Override
     protected void onStart() {
         super.onStart();
         Intent intent = getIntent();
         if (Objects.equals(intent.getAction(), Intent.ACTION_VIEW) && intent.getData() != null) {
-            if (checkSelfPermission(READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED) {
                 String[] permissions = {READ_EXTERNAL_STORAGE};
                 requestPermissions(permissions, 101);
-            }
         }
         checkBatteryOptimizationSettings();
     }
@@ -294,11 +264,15 @@ public class MainActivity extends AppCompatActivity {
         addButton = findViewById(R.id.addButton);
         options = findViewById(R.id.options);
         settings = findViewById(R.id.settings);
+        selectAllButton = findViewById(R.id.selectAll);
+        removeButton = findViewById(R.id.remove);
+        addToPlaylistButton = findViewById(R.id.addToPlaylist);
         listOfPlaylistsRecycler = findViewById(R.id.listOfPlaylistsRecycler);
         listOfPlaylistsRecycler.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         listOfPlaylistsAdapter = new ListOfPlaylistsAdapter(this);
         listOfPlaylistsRecycler.setAdapter(listOfPlaylistsAdapter);
-        new ItemTouchHelper(new ItemMoveCallback(listOfPlaylistsAdapter)).attachToRecyclerView(listOfPlaylistsRecycler);
+        listOfPlaylistsItemTouchHelper = new ItemTouchHelper(new ItemMoveCallback(listOfPlaylistsAdapter));
+        listOfPlaylistsItemTouchHelper.attachToRecyclerView(listOfPlaylistsRecycler);
         playlistRecycler = findViewById(R.id.playlistRecycler);
         playlistRecycler.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
 
@@ -362,18 +336,22 @@ public class MainActivity extends AppCompatActivity {
         };
 
         youTubePlayerView.setEnableAutomaticInitialization(false);
-        IFramePlayerOptions options = new IFramePlayerOptions.Builder().controls(0).build();
-        youTubePlayerView.initialize(listener, options);
+        IFramePlayerOptions iFramePlayerOptions = new IFramePlayerOptions.Builder().controls(0).build();
+        youTubePlayerView.initialize(listener, iFramePlayerOptions);
         View mainView = youTubePlayerView.inflateCustomPlayerUi(R.layout.video_controller);
 
         addButton.setOnClickListener(view -> {
             if (viewMode) videoDialog.show(); else playlistDialog.show();
         });
 
-        icon.setOnClickListener(view -> setViewMode(false));
+        icon.setOnClickListener(view -> back());
 
         settingsPopupMenu = getSettingsPopupMenu();
         settings.setOnClickListener(view -> settingsPopupMenu.show());
+
+        listOfPlaylistsPopupMenu = getListOfPlaylistsPopupMenu();
+        options.setOnClickListener(v ->
+                (viewMode ? getPlaylistPopupMenu(options, true, currentPlaylistIndex) : listOfPlaylistsPopupMenu).show());
 
         musicController = findViewById(R.id.musicController);
         musicTitle = findViewById(R.id.musicTitle);
@@ -430,9 +408,7 @@ public class MainActivity extends AppCompatActivity {
             showMessage(getString(R.string.music_start_point_set));
         });
         fullscreen = mainView.findViewById(R.id.fullscreen);
-        fullscreen.setOnClickListener(v -> {
-            setFullscreen(!isFullscreen);
-        });
+        fullscreen.setOnClickListener(v -> setFullscreen(!isFullscreen));
         videoPrevious = mainView.findViewById(R.id.previous);
         videoPrevious.setOnClickListener(v -> playPrevious());
         videoNext = mainView.findViewById(R.id.next);
@@ -459,26 +435,44 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
+            public void onStartTrackingTouch(SeekBar seekBar) {}
 
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
+            public void onStopTrackingTouch(SeekBar seekBar) {}
         });
         noPlaylistsText = findViewById(R.id.noPlaylists);
         noVideosText = findViewById(R.id.noVideos);
 
+        selectAllButton.setOnClickListener(v -> selectAllItems());
+        removeButton.setOnClickListener(v -> removeItems());
+        addToPlaylistButton.setOnClickListener(v -> addItemsToPlaylist());
+
         setViewMode(false);
+    }
+
+    @NonNull PopupMenu getListOfPlaylistsPopupMenu() {
+        PopupMenu menu = new PopupMenu(context, options);
+        menu.inflate(R.menu.list_of_playlists_options);
+        menu.getMenu().getItem(0).setEnabled(!listOfPlaylists.isEmpty());
+        menu.setOnMenuItemClickListener(item -> {
+            int itemId = item.getItemId();
+            if (itemId == R.id.sort) {
+                setListSortMode(true);
+                return true;
+            }
+            return false;
+        });
+        return menu;
     }
 
     @NonNull PopupMenu getPlaylistPopupMenu(View anchor, boolean current, int index) {
         PopupMenu menu = new PopupMenu(context, anchor);
         Playlist forPlaylist = listOfPlaylists.getPlaylistAt(index);
         menu.inflate(R.menu.playlist_options);
-        for (int i = 0; i < 2; i++) menu.getMenu().getItem(i).setVisible(!current);
+        menu.getMenu().getItem(0).setVisible(!current);
+        menu.getMenu().getItem(1).setVisible(!current);
+        menu.getMenu().getItem(3).setVisible(current);
+        if (current) menu.getMenu().getItem(3).setEnabled(!currentPlaylist.isEmpty());
         menu.setOnMenuItemClickListener(item -> {
             int itemIndex = item.getItemId();
             if (itemIndex == R.id.addToTop) {
@@ -489,25 +483,8 @@ public class MainActivity extends AppCompatActivity {
                 playlistDialog.show(index + 1);
                 return true;
             }
-            if (itemIndex == R.id.paste) {
-                if (cutPlaylistIndex != index) {
-                    if (cutPlaylistIndex == playingPlaylistIndex && cutVideoIndex == playingVideoIndex && cut){
-                        closePlayer();
-                    }
-                    listOfPlaylists.moveVideo(cutPlaylistIndex, cutVideoIndex, index, cut);
-                    listOfPlaylistsAdapter.notifyItemChanged(cutPlaylistIndex);
-                    listOfPlaylistsAdapter.notifyItemChanged(index);
-                    cutPlaylistIndex = -1;
-                    cutPlaylist = null;
-                    cutVideoIndex = -1;
-                    cutVideo = null;
-
-                    if (current) {
-                        playlistAdapter.insertItem(0);
-                    }
-
-                    showMessage("Yapıştırıldı");
-                }
+            if (itemIndex == R.id.sort) {
+                setListSortMode(true);
                 return true;
             }
             if (itemIndex == R.id.edit) {
@@ -519,23 +496,28 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
             if (itemIndex == R.id.delete) {
-                AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this, R.style.Theme_OnlinePlaylistsDialogDark);
-                b.setTitle(forPlaylist.title);
-                b.setMessage(getString(R.string.delete_playlist_alert));
-                b.setPositiveButton(getString(R.string.dialog_button_delete) , ((dialog, which) -> {
-                    listOfPlaylists.removePlaylist(index);
-                    if (!current) {
-                        listOfPlaylistsAdapter.removeItem(index);
-                    }
-                    dialog.dismiss();
-                }));
-                b.setNegativeButton(getString(R.string.dialog_button_no), ((dialog, which) -> dialog.dismiss()));
-                b.create().show();
+                removePlaylist(index);
+                updateNoItemsView();
                 return true;
             }
             return false;
         });
         return menu;
+    }
+
+    void removePlaylist(int index) {
+        AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this, R.style.Theme_OnlinePlaylistsDialogDark);
+        b.setTitle(listOfPlaylists.getPlaylistAt(index).title);
+        b.setMessage(getString(R.string.delete_playlist_alert));
+        b.setPositiveButton(getString(R.string.dialog_button_delete) , ((dialog, which) -> {
+            listOfPlaylists.removePlaylist(index);
+            listOfPlaylistsAdapter.removeItem(index);
+            updateNoItemsView();
+        }));
+        b.setNegativeButton(getString(R.string.dialog_button_no), ((dialog, which) -> {
+            listOfPlaylistsAdapter.notifyItemChanged(index);
+        }));
+        b.create().show();
     }
 
     @NonNull PopupMenu getVideoPopupMenu(View anchor, int index) {
@@ -552,48 +534,36 @@ public class MainActivity extends AppCompatActivity {
                 videoDialog.show(index + 1);
                 return true;
             }
-            if (itemIndex == R.id.cut) {
-                cutPlaylistIndex = currentPlaylistIndex;
-                cutPlaylist = listOfPlaylists.getPlaylistAt(cutPlaylistIndex);
-                cutVideoIndex = index;
-                cutVideo = currentPlaylist.getVideoAt(cutVideoIndex);
-                cut = true;
-                showMessage(getString(R.string.cut_to_clipboard));
-                return true;
-            }
-            if (itemIndex == R.id.copy) {
-                cutPlaylistIndex = currentPlaylistIndex;
-                cutPlaylist = listOfPlaylists.getPlaylistAt(cutPlaylistIndex);
-                cutVideoIndex = index;
-                cutVideo = currentPlaylist.getVideoAt(cutVideoIndex);
-                cut = false;
-                showMessage(getString(R.string.copy_to_clipboard));
-                return true;
-            }
             if (itemIndex == R.id.openInYouTube) {
                 openVideoInYoutube(forVideo);
                 return true;
             }
             if (itemIndex == R.id.delete) {
-                AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this, R.style.Theme_OnlinePlaylistsDialogDark);
-                b.setTitle(forVideo.title);
-                b.setMessage(getString(R.string.delete_video_alert));
-                b.setPositiveButton(getString(R.string.dialog_button_delete), ((dialog, which) -> {
-                    currentPlaylist.removeVideo(index);
-                    playlistAdapter.removeItem(index);
-                    dialog.dismiss();
-                }));
-                b.setNegativeButton(getString(R.string.dialog_button_no), ((dialog, which) -> dialog.dismiss()));
-                b.create().show();
+                removeVideo(index);
                 return true;
             }
             if (itemIndex == R.id.addToPlaylist) {
-                new ManagePlaylistsDialog(this, forVideo).show();
+                new ManagePlaylistsDialog(this, index).show();
                 return true;
             }
             return false;
         });
         return menu;
+    }
+
+    void removeVideo(int index) {
+        AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this, R.style.Theme_OnlinePlaylistsDialogDark);
+        b.setTitle(currentPlaylist.getVideoAt(index).title);
+        b.setMessage(getString(R.string.delete_video_alert));
+        b.setPositiveButton(getString(R.string.dialog_button_delete), ((dialog, which) -> {
+            currentPlaylist.removeVideo(index);
+            playlistAdapter.removeItem(index);
+            updateNoItemsView();
+        }));
+        b.setNegativeButton(getString(R.string.dialog_button_no), ((dialog, which) -> {
+            playlistAdapter.notifyItemChanged(index);
+        }));
+        b.create().show();
     }
 
     private @NonNull PopupMenu getSettingsPopupMenu() {
@@ -607,7 +577,8 @@ public class MainActivity extends AppCompatActivity {
         if (autoShutDown == 1) menu.findItem(R.id.auto10Min).setChecked(true);
         if (autoShutDown == 2) menu.findItem(R.id.auto30Min).setChecked(true);
         if (autoShutDown == 3) menu.findItem(R.id.auto1Hour).setChecked(true);
-        if (musicControlsMode) menu.findItem(R.id.rewindForward).setChecked(true); else menu.findItem(R.id.prevNext).setChecked(true);
+        if (musicControlsMode) menu.findItem(R.id.rewindForward).setChecked(true);
+        else menu.findItem(R.id.prevNext).setChecked(true);
         menu.findItem(R.id.shuffleMode).setChecked(shuffle);
         menu.findItem(R.id.musicMode).setChecked(musicMode);
         popupMenu.setOnMenuItemClickListener(item -> {
@@ -693,6 +664,9 @@ public class MainActivity extends AppCompatActivity {
         try {
             listOfPlaylists.addPlaylist(new Playlist().fromJson(OnlinePlaylistsUtils.readFile(this, uri)));
             showMessage(getString(R.string.import_success));
+            listOfPlaylistsRecycler.scrollToPosition(0);
+            listOfPlaylistsAdapter.notifyItemInserted(0);
+            updateNoItemsView();
         } catch (Exception e) {
             e.printStackTrace();
             showMessage(getString(R.string.import_fail));
@@ -724,11 +698,6 @@ public class MainActivity extends AppCompatActivity {
     private void openPlaylist(int index, int scroll) {
         currentPlaylistIndex = index;
         currentPlaylist = listOfPlaylists.getPlaylistAt(index);
-        PopupMenu currentPlaylistOptions = getPlaylistPopupMenu(options, true, currentPlaylistIndex);
-        options.setOnClickListener(view -> {
-            currentPlaylistOptions.getMenu().getItem(2).setEnabled(cutPlaylist != null);
-            currentPlaylistOptions.show();
-        });
         setViewMode(true);
         playlistRecycler.scrollToPosition(scroll);
     }
@@ -812,7 +781,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void setViewMode(boolean mode) {
         viewMode = mode;
-        titleText.setText(viewMode? currentPlaylist.title : getString(R.string.app_name));
 
         listOfPlaylistsRecycler.setVisibility(View.GONE);
         noPlaylistsText.setVisibility(View.GONE);
@@ -823,25 +791,100 @@ public class MainActivity extends AppCompatActivity {
             if (playlistAdapter == null) {
                 playlistAdapter = new PlaylistAdapter(this);
                 playlistRecycler.setAdapter(playlistAdapter);
-                new ItemTouchHelper(new ItemMoveCallback(playlistAdapter)).attachToRecyclerView(playlistRecycler);
+                playlistItemTouchHelper = new ItemTouchHelper(new ItemMoveCallback(playlistAdapter));
+                playlistItemTouchHelper.attachToRecyclerView(playlistRecycler);
             } else {
                 playlistAdapter.notifyDataSetChanged();
             }
-            boolean noVideos = currentPlaylist.getLength() == 0;
-            playlistRecycler.setVisibility(noVideos ? View.GONE : View.VISIBLE);
-            noVideosText.setVisibility(noVideos ? View.VISIBLE : View.GONE);
         } else {
             if (listOfPlaylistsAdapter != null) {
                 listOfPlaylistsAdapter.notifyDataSetChanged();
             }
-            boolean noPlaylists = listOfPlaylists.getLength() == 0;
+        }
+        updateToolbar();
+        updateNoItemsView();
+    }
+
+    void setSelectionMode(boolean _selectionMode) {
+        selectionMode = _selectionMode;
+        if (viewMode) playlistAdapter.notifyDataSetChanged();
+        else listOfPlaylistsAdapter.notifyDataSetChanged();
+        updateToolbar();
+    }
+
+    void setListSortMode(boolean _listSortMode) {
+        listSortMode = _listSortMode;
+        if (viewMode) playlistAdapter.notifyDataSetChanged();
+        else listOfPlaylistsAdapter.notifyDataSetChanged();
+        updateToolbar();
+    }
+
+    void updateToolbar() {
+        int selectedItemCount = 0;
+        if (selectionMode) selectedItemCount = selectedItems.size();
+        titleText.setText(
+                listSortMode && viewMode ? "Videoları sırala"
+                        : listSortMode ? "Oynatma listelerini sırala"
+                        : selectionMode ? String.valueOf(selectedItemCount).concat(" öge seçildi")
+                        : viewMode ? currentPlaylist.title
+                        : getString(R.string.app_name));
+        icon.setImageResource(selectionMode ? R.drawable.baseline_close_24
+                : viewMode || listSortMode ? R.drawable.baseline_arrow_back_24
+                : R.drawable.baseline_smart_display_24);
+        icon.setClickable(viewMode || selectionMode || listSortMode);
+        options.setVisibility(selectionMode || listSortMode ? View.GONE : View.VISIBLE);
+        settings.setVisibility(selectionMode || listSortMode ? View.GONE : View.VISIBLE);
+        selectAllButton.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
+        removeButton.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
+        addToPlaylistButton.setVisibility(selectionMode && viewMode ? View.VISIBLE : View.GONE);
+        addButton.setVisibility(selectionMode || listSortMode ? View.GONE : View.VISIBLE);
+    }
+
+    void updateNoItemsView() {
+        if (viewMode) {
+            boolean noVideos = currentPlaylist.isEmpty();
+            playlistRecycler.setVisibility(noVideos ? View.GONE : View.VISIBLE);
+            noVideosText.setVisibility(noVideos ? View.VISIBLE : View.GONE);
+        } else {
+            boolean noPlaylists = listOfPlaylists.isEmpty();
             listOfPlaylistsRecycler.setVisibility(noPlaylists ? View.GONE : View.VISIBLE);
             noPlaylistsText.setVisibility(noPlaylists ? View.VISIBLE : View.GONE);
         }
+    }
 
-        icon.setImageResource(viewMode ? R.drawable.baseline_arrow_back_24 : R.drawable.baseline_smart_display_24);
-        icon.setClickable(viewMode);
-        options.setVisibility(mode ? View.VISIBLE : View.GONE);
+    private void selectAllItems() {
+        selectedItems.clear();
+        int length;
+        if (viewMode) length = currentPlaylist.getLength(); else length = listOfPlaylists.getLength();
+        for (int i = 0; i < length; i++) selectedItems.add(i);
+        if (viewMode) playlistAdapter.notifyDataSetChanged();
+        else listOfPlaylistsAdapter.notifyDataSetChanged();
+        updateToolbar();
+    }
+
+    private void removeItems() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_OnlinePlaylistsDialogDark);
+        builder.setTitle("Birden çok öge sil");
+        builder.setMessage(String.valueOf(selectedItems.size()).concat(" öge silinsin mi?"));
+        builder.setPositiveButton(R.string.dialog_button_delete, (dialog, which) -> {
+            if (viewMode) {
+                currentPlaylist.removeVideos(selectedItems);
+                if (selectedItems.contains(playingVideoIndex)) closePlayer();
+            }
+            else {
+                listOfPlaylists.removePlaylists(selectedItems);
+                if (selectedItems.contains(playingPlaylistIndex)) closePlayer();
+            }
+            selectedItems.clear();
+            setSelectionMode(false);
+            updateNoItemsView();
+        });
+        builder.setNegativeButton(R.string.dialog_button_no, null);
+        builder.create().show();
+    }
+
+    private void addItemsToPlaylist() {
+        new ManagePlaylistsDialog(this, selectedItems).show();
     }
 
     private void setMusicControlsMode(boolean _musicControlsMode) {
@@ -908,9 +951,7 @@ public class MainActivity extends AppCompatActivity {
     private void updateController() {
         musicController.setVisibility(showController && musicMode ? View.VISIBLE : View.GONE);
         youTubePlayerView.setVisibility(showController && !musicMode ? View.VISIBLE : View.GONE);
-        if (!isPortrait) {
-            OnlinePlaylistsUtils.setDimensions(context, list, musicMode ? MATCH_PARENT : 300, MATCH_PARENT, 0);
-        }
+        if (!isPortrait) OnlinePlaylistsUtils.setDimensions(context, list, musicMode ? MATCH_PARENT : 300, MATCH_PARENT, 0);
         setShowThumbnails();
     }
 

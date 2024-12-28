@@ -2,7 +2,7 @@ package com.example.onlineplaylists;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.Comparator;
 
 public class ListOfPlaylists {
     ArrayList<Playlist> playlists;
@@ -15,7 +15,7 @@ public class ListOfPlaylists {
         playlists = new ArrayList<>();
         ArrayList<String> list = Json.toList(_json);
 
-        for (String i : list){
+        for (String i : list) {
             playlists.add(new Playlist().fromJson(i));
         }
 
@@ -56,6 +56,11 @@ public class ListOfPlaylists {
         playlists.remove(index);
     }
 
+    public void removePlaylists(ArrayList<Integer> indexes) {
+        indexes.sort(Comparator.reverseOrder());
+        for (Integer i : indexes) playlists.remove((int) i);
+    }
+
     public void movePlaylistDep(int from, int to) {
         if (from == to) return;
         if (from < to) to--;
@@ -82,5 +87,9 @@ public class ListOfPlaylists {
         if (cut) fromPlaylist.removeVideo(video);
         Playlist toPlaylist = playlists.get(to);
         toPlaylist.addVideo(videoToMove);
+    }
+
+    public boolean isEmpty() {
+        return playlists.isEmpty();
     }
 }

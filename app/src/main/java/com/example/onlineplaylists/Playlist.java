@@ -3,6 +3,7 @@ package com.example.onlineplaylists;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 
 public class Playlist {
@@ -54,6 +55,11 @@ public class Playlist {
 
     public void removeVideo(int index) {
         videos.remove(index);
+    }
+
+    public void removeVideos(ArrayList<Integer> indexes) {
+        indexes.sort(Comparator.reverseOrder());
+        for (Integer i : indexes) videos.remove((int) i);
     }
 
     public void moveVideoDep(int from, int to) {
@@ -113,5 +119,9 @@ public class Playlist {
         map.put("icon", String.valueOf(icon));
         map.put("videos", Json.valueOf(list));
         return Json.valueOf(map);
+    }
+
+    public boolean isEmpty() {
+        return videos.isEmpty();
     }
 }

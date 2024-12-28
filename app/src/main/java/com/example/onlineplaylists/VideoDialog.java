@@ -80,6 +80,7 @@ class VideoDialog {
                 PlaylistAdapter a = (PlaylistAdapter) activity.playlistRecycler.getAdapter();
                 a.insertItem(whereToAdd);
                 dismiss();
+                activity.updateNoItemsView();
             }
         });
 

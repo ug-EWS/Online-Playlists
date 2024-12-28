@@ -1,7 +1,6 @@
 package com.example.onlineplaylists;
 
 import android.content.DialogInterface;
-import android.graphics.Color;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
@@ -39,10 +38,7 @@ class PlaylistDialog {
         for (int i = 0; i < 5; i++) {
             iconSelector.getChildAt(i).setOnClickListener(onClickListener);
         }
-        builder.setNegativeButton(
-                activity.getString(R.string.dialog_button_cancel),
-                (dialog, which) -> dialog.dismiss()
-        );
+        builder.setNegativeButton(activity.getString(R.string.dialog_button_cancel), null);
         builder.setView(dialogView);
         editText.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_GO) {
@@ -60,7 +56,7 @@ class PlaylistDialog {
                 if (text.isEmpty()) text = editText.getHint().toString();
                 activity.listOfPlaylists.addPlaylistTo(new Playlist(text, selectedIcon), whereToAdd);
                 activity.listOfPlaylistsAdapter.insertItem(whereToAdd);
-                dialog.dismiss();
+                activity.updateNoItemsView();
             });
         } else {
             toEdit = activity.listOfPlaylists.getPlaylistAt(_forPlaylist);
