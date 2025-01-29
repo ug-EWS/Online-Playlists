@@ -1,8 +1,11 @@
 package com.example.onlineplaylists;
 
+import androidx.annotation.NonNull;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 
 public class ListOfPlaylists {
     ArrayList<Playlist> playlists;
@@ -23,13 +26,12 @@ public class ListOfPlaylists {
     }
 
     public void addPlaylist(Playlist p) {
-        if (playlists.isEmpty()) playlists.add(p); else playlists.add(0, p);
+        addPlaylistTo(p, 0);
     }
 
     public void addPlaylistTo(Playlist p, int to) {
-        if (playlists.isEmpty()) playlists.add(p);
-        else if (playlists.size() < to) playlists.add(0, p);
-        else playlists.add(to, p);
+        if (playlists.size() < to) to = 0;
+        playlists.add(to, p);
     }
 
     public Playlist getPlaylistAt(int index) {
@@ -56,7 +58,7 @@ public class ListOfPlaylists {
         playlists.remove(index);
     }
 
-    public void removePlaylists(ArrayList<Integer> indexes) {
+    public void removePlaylists(@NonNull ArrayList<Integer> indexes) {
         indexes.sort(Comparator.reverseOrder());
         for (Integer i : indexes) playlists.remove((int) i);
     }
@@ -81,12 +83,19 @@ public class ListOfPlaylists {
         }
     }
 
-    public void moveVideo(int from, int video, int to, boolean cut) {
-        Playlist fromPlaylist = playlists.get(from);
-        YouTubeVideo videoToMove = fromPlaylist.getVideoAt(video);
-        if (cut) fromPlaylist.removeVideo(video);
-        Playlist toPlaylist = playlists.get(to);
-        toPlaylist.addVideo(videoToMove);
+    public String mergePlaylists(@NonNull ArrayList<Integer> indexes) {
+        indexes.sort(Comparator.naturalOrder());
+        Playlist basePlaylist = playlists.get(indexes.get(0));
+        for (int i = indexes.size() - 1; i > 0; i--) {
+            Playlist playlist = playlists.get(indexes.get(i));
+            for (int j = playlist.getLength() - 1; j >= 0; j--) {
+                YouTubeVideo video = playlist.getVideoAt(j);
+                if (!basePlaylist.contains(video))
+                    basePlaylist.addVideo(video);
+            }
+            removePlaylist(indexes.get(i));
+        }
+        return basePlaylist.title;
     }
 
     public boolean isEmpty() {

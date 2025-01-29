@@ -19,7 +19,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.OnlinePlaylists"
-        tools:targetApi="34">
+        tools:targetApi="35">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -30,24 +30,11 @@
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.DEFAULT"/>
                 <data android:scheme="file" />
                 <data android:scheme="content" />
                 <data android:host="*"/>
-                <data android:mimeType="*/*"/>
-                <data android:pathPattern=".*.opl"/>
-                <!-->
-                <data android:pathPattern=".*\\.opl" />
-                <data android:pathPattern=".*\\..*\\.opl" />
-                <data android:pathPattern=".*\\..*\\..*\\.opl" />
-                <data android:pathPattern=".*\\..*\\..*\\..*\\.opl" />
-                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.opl" />
-                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.opl" />
-                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.opl" />
-                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.opl" />
-                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.opl" />
-                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.opl" />
-                <!-->
+                <data android:mimeType="application/json"/>
             </intent-filter>
         </activity>
         <service android:name=".PlaybackService"

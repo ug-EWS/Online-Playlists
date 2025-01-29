@@ -10,6 +10,7 @@ constraintlayout = "2.1.4"
 core = "12.1.0"
 gson = "2.11.0"
 glide = "5.0.0-rc01"
+media3Session = "1.4.1"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -22,6 +23,7 @@ constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayo
 core = { group = "com.pierfrancescosoffritti.androidyoutubeplayer", name = "core", version.ref = "core" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
+media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3Session" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

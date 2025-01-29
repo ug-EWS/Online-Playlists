@@ -53,7 +53,7 @@
         android:title="Otomatik kapanma">
         <menu>
             <group
-                android:checkableBehavior="single"
+                android:checkableBehavior="none"
                 android:enabled="true">
                 <item
                     android:id="@+id/autoDisabled"
@@ -67,6 +67,11 @@
                 <item
                     android:id="@+id/auto1Hour"
                     android:title="60 dakika sonra" />
+                <item
+                    android:id="@+id/custom"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:title="Özel" />
             </group>
         </menu>
     </item>

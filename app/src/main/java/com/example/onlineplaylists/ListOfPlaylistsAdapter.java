@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -42,16 +43,17 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         View itemView = holder.itemView;
         int pos = holder.getAdapterPosition();
 
+        LinearLayout layout = itemView.findViewById(R.id.layout);
         ImageView icon = itemView.findViewById(R.id.playlistIcon);
         TextView title = itemView.findViewById(R.id.playlistTitle);
         TextView size = itemView.findViewById(R.id.playlistSize);
         ImageView options = itemView.findViewById(R.id.playlistOptions);
         CheckBox checkBox = itemView.findViewById(R.id.checkBox);
 
-        setItemOnClickListener(itemView, pos);
-        setItemOnLongClickListener(itemView, pos);
+        setItemOnClickListener(layout, pos);
+        setItemOnLongClickListener(layout, pos);
 
-        itemView.setBackgroundResource(
+        layout.setBackgroundResource(
                 activity.playingPlaylistIndex == pos ? R.drawable.list_item_playing
                         : R.drawable.list_item);
 
@@ -152,7 +154,6 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     @Override
     public void onRowSelected(RecyclerView.ViewHolder viewHolder) {
-        activity.vibrator.vibrate(50);
     }
 
     @Override

@@ -67,8 +67,10 @@ class ManagePlaylistsDialog {
         length = listOfPlaylists.getLength();
 
         for (int i = 0; i < length; i++) {
-            Playlist playlist = listOfPlaylists.getPlaylistAt(i);
-            items.add(playlist.title);
+            if (activity.currentPlaylistIndex != i) {
+                Playlist playlist = listOfPlaylists.getPlaylistAt(i);
+                items.add(playlist.title);
+            }
         }
 
         itemsArr = items.toArray(new CharSequence[0]);
@@ -80,10 +82,12 @@ class ManagePlaylistsDialog {
 
         builder.setPositiveButton(R.string.dialog_button_add, (dialog1, which) -> {
             for (int i = 0; i < length; i++) {
-                Playlist playlist = listOfPlaylists.getPlaylistAt(i);
                 if (contains[i]) {
-                    for (int j = _forVideos.size() - 1; j >= 0; j--)
-                        playlist.addVideo(activity.currentPlaylist.getVideoAt(j));
+                    Playlist playlist = listOfPlaylists.getPlaylistAt(i);
+                    for (int j = _forVideos.size() - 1; j >= 0; j--) {
+                        YouTubeVideo youTubeVideo = activity.currentPlaylist.getVideoAt(_forVideos.get(j));
+                        if (!playlist.contains(youTubeVideo)) playlist.addVideo(youTubeVideo);
+                    }
                 }
             }
             activity.setSelectionMode(false);
@@ -104,6 +108,7 @@ class ManagePlaylistsDialog {
     }
 
     public void show() {
-        dialog.show();
+        if (items.isEmpty()) activity.showMessage("Bu videonun bulunmadığı bir oynatma listesi yok.");
+        else dialog.show();
     }
 }

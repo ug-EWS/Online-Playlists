@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- Base application theme. -->
     <style name="Theme.OnlinePlaylists" parent="Theme.MaterialComponents.NoActionBar">
         <!-- Primary brand color. -->
@@ -10,9 +10,11 @@
         <item name="colorSecondaryVariant">@color/red</item>
         <item name="colorOnSecondary">@color/white</item>
         <!-- Status bar color. -->
-        <item name="android:statusBarColor" >?attr/colorPrimary</item>
-        <item name="android:navigationBarColor" >@color/black</item>
+        <item name="android:statusBarColor">@color/dark_grey</item>
+        <item name="android:navigationBarColor">@color/transparent</item>
+
         <!-- Customize your theme here. -->
         <item name="android:windowTranslucentNavigation">true</item>
+        <item name="fontFamily">@font/oxygen</item>
     </style>
 </resources>

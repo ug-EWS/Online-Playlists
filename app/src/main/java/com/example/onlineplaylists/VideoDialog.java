@@ -33,7 +33,7 @@ class VideoDialog {
     ImageView backButton;
     ImageView refreshButton;
     ImageView forwardButton;
-    ImageButton searchButton;
+    ImageView searchButton;
     int whereToAdd;
 
     @SuppressLint("SetJavaScriptEnabled")

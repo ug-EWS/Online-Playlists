@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -38,16 +39,17 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
         View itemView = holder.itemView;
         int pos = holder.getAdapterPosition();
 
+        LinearLayout layout = itemView.findViewById(R.id.layout);
         ImageView thumbnail = itemView.findViewById(R.id.videoThumbnail);
         TextView title = itemView.findViewById(R.id.videoTitle);
         ImageView options = itemView.findViewById(R.id.videoOptions);
         CardView card = itemView.findViewById(R.id.card);
         CheckBox checkBox = itemView.findViewById(R.id.checkBox);
 
-        setItemOnClickListener(itemView, pos);
-        setItemOnLongClickListener(itemView, pos);
+        setItemOnClickListener(layout, pos);
+        setItemOnLongClickListener(layout, pos);
 
-        itemView.setBackgroundResource(activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.playingVideoIndex == pos
+        layout.setBackgroundResource(activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.playingVideoIndex == pos
                 ? R.drawable.list_item_playing
                 : R.drawable.list_item);
 
@@ -55,7 +57,8 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
         title.setText(thisVideo.title);
         title.setTextColor(activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.playingVideoIndex == pos ? Color.GREEN : Color.WHITE);
         Glide.with(activity).load(thisVideo.getThumbnailUrl()).into(thumbnail);
-        card.setVisibility(activity.showThumbnails ? View.VISIBLE : View.GONE);
+        OnlinePlaylistsUtils.setDimensions(activity, card, activity.isPortrait ? 128 : 80, activity.isPortrait ? 72 : 45, 0);
+        OnlinePlaylistsUtils.setDimensions(activity, title, LinearLayout.LayoutParams.WRAP_CONTENT, activity.isPortrait ? ViewGroup.LayoutParams.WRAP_CONTENT : LinearLayout.LayoutParams.MATCH_PARENT, 1);
         options.setVisibility(activity.selectionMode || activity.listSortMode ? View.GONE : View.VISIBLE);
         checkBox.setVisibility(activity.selectionMode ? View.VISIBLE : View.GONE);
         checkBox.setChecked(activity.selectedItems.contains(position));
@@ -106,7 +109,7 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
                     activity.updateToolbar();
                 }
             }
-            else {
+            else if (!activity.listSortMode) {
                 if ((activity.currentPlaylistIndex == activity.playingPlaylistIndex && position == activity.playingVideoIndex))
                     if (activity.isPlaying) activity.youTubePlayer.pause();
                     else activity.youTubePlayer.play();
@@ -153,7 +156,6 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
 
     @Override
     public void onRowSelected(RecyclerView.ViewHolder viewHolder) {
-        activity.vibrator.vibrate(50);
     }
 
     @Override

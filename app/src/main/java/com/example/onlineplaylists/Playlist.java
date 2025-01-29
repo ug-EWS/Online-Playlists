@@ -1,6 +1,8 @@
 package com.example.onlineplaylists;
 
 
+import androidx.annotation.NonNull;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -13,12 +15,6 @@ public class Playlist {
 
     Playlist() {
         title = "";
-        icon = 0;
-        videos = new ArrayList<>();
-    }
-
-    Playlist(String _title) {
-        title = _title;
         icon = 0;
         videos = new ArrayList<>();
     }
@@ -46,18 +42,23 @@ public class Playlist {
     }
 
     public void addVideo(YouTubeVideo _video) {
-        if (videos.isEmpty()) videos.add(_video); else videos.add(0, _video);
+        videos.add(0, _video);
     }
 
     public void addVideoTo(YouTubeVideo _video, int to) {
+        if (videos.size() < to) to = 0;
         videos.add(to, _video);
+    }
+
+    public void addVideoToEnd(YouTubeVideo _video) {
+        videos.add(_video);
     }
 
     public void removeVideo(int index) {
         videos.remove(index);
     }
 
-    public void removeVideos(ArrayList<Integer> indexes) {
+    public void removeVideos(@NonNull ArrayList<Integer> indexes) {
         indexes.sort(Comparator.reverseOrder());
         for (Integer i : indexes) videos.remove((int) i);
     }
@@ -94,7 +95,7 @@ public class Playlist {
         return videos.size();
     }
 
-    public boolean contains(YouTubeVideo _video) {
+    public boolean contains(@NonNull YouTubeVideo _video) {
         return contains(_video.id);
     }
 

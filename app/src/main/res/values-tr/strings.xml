@@ -41,4 +41,6 @@
     <string name="music_start_point_set">Müzik başlangıç noktası ayarlandı.</string>
     <string name="no_playlists">Oynatma listesi yok.\n\nBir oynatma listesi eklemek için\n\"+\" düğmesine basın.</string>
     <string name="no_videos">Oynatma listesi boş.\n\nBir video eklemek için \n\"+\" düğmesine basın.</string>
+    <string name="timer_disabled"></string>
+    <string name="timer_set"></string>
 </resources>

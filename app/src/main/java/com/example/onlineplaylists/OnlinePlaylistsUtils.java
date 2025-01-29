@@ -24,7 +24,9 @@ public class OnlinePlaylistsUtils {
     public static void setDimensions(Context c, View v, int width, int height, int weight) {
         if (width > 0) width = dpToPx(c, width);
         if (height > 0) height = dpToPx(c, height);
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(width, height);
+        LinearLayout.LayoutParams p = (LinearLayout.LayoutParams) v.getLayoutParams();
+        p.width = width;
+        p.height = height;
         p.weight = weight;
         v.setLayoutParams(p);
     }
