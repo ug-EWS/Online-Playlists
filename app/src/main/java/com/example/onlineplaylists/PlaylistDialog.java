@@ -21,7 +21,7 @@ class PlaylistDialog {
 
     PlaylistDialog(MainActivity _activity, int _forPlaylist) {
         activity = _activity;
-        builder = new AlertDialog.Builder(activity, R.style.Theme_OnlinePlaylistsDialogDark);
+        builder = new AlertDialog.Builder(activity, R.style.Theme_OnlinePlaylistsDialog);
         dialogView = activity.getLayoutInflater().inflate(R.layout.add_playlist, null);
         editText = dialogView.findViewById(R.id.editText);
         iconSelector = dialogView.findViewById(R.id.iconSelector);

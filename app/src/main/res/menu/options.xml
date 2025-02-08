@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:title="@string/video_finished">
+    <item
+        android:title="@string/video_finished"
+        app:showAsAction="never">
         <menu>
             <group
                 android:checkableBehavior="single"
@@ -22,7 +24,8 @@
         android:id="@+id/shuffleMode"
         android:checkable="true"
         android:checked="false"
-        android:title="@string/shuffle" />
+        android:title="@string/shuffle"
+        app:showAsAction="never" />
     <item
         android:id="@+id/musicMode"
         android:checkable="true"
@@ -33,49 +36,69 @@
     <item
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:title="Müzik tuşları">
+        android:title="@string/music_buttons"
+        app:showAsAction="never">
         <menu>
             <group
                 android:checkableBehavior="single"
                 android:enabled="true">
                 <item
                     android:id="@+id/rewindForward"
-                    android:title="Geri ve ileri sarma" />
+                    android:title="@string/rewind_forward" />
                 <item
                     android:id="@+id/prevNext"
-                    android:title="Önceki ve sonraki" />
+                    android:title="@string/previous_next" />
             </group>
         </menu>
     </item>
     <item
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:title="Otomatik kapanma">
+        android:title="@string/auto_shut_down"
+        app:showAsAction="never">
         <menu>
             <group
                 android:checkableBehavior="none"
                 android:enabled="true">
                 <item
                     android:id="@+id/autoDisabled"
-                    android:title="Devre dışı" />
+                    android:title="@string/auto_shut_down_disable" />
                 <item
                     android:id="@+id/auto10Min"
-                    android:title="10 dakika sonra" />
+                    android:title="@string/auto_shut_down_10" />
                 <item
                     android:id="@+id/auto30Min"
-                    android:title="30 dakika sonra" />
+                    android:title="@string/auto_shut_down_30" />
                 <item
                     android:id="@+id/auto1Hour"
-                    android:title="60 dakika sonra" />
+                    android:title="@string/auto_shut_down_60" />
                 <item
                     android:id="@+id/custom"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:title="Özel" />
+                    android:title="@string/auto_shut_down_custom" />
+            </group>
+        </menu>
+    </item>
+    <item
+        android:id="@+id/theme"
+        android:title="Tema">
+        <menu >
+            <group android:checkableBehavior="single" >
+                <item
+                    android:id="@+id/lightTheme"
+                    android:title="Açık" />
+                <item
+                    android:id="@+id/darkTheme"
+                    android:title="Koyu" />
+                <item
+                    android:id="@+id/autoTheme"
+                    android:title="Otomatik" />
             </group>
         </menu>
     </item>
     <item
         android:id="@+id/about"
-        android:title="@string/about" />
+        android:title="@string/about"
+        app:showAsAction="never" />
 </menu>

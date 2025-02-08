@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:padding="8dp"
         android:text="@string/title"
-        android:textColor="@color/white" />
+        android:textColor="@color/grey1" />
 
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
@@ -26,12 +26,12 @@
             android:id="@+id/editText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/dark_grey"
+            android:background="@color/grey2"
             android:ems="10"
             android:hint="@string/default_title"
             android:inputType="text"
             android:padding="16dp"
-            android:textColor="@color/white"
+            android:textColor="@color/grey1"
             android:textColorHint="@color/blue_grey" />
     </androidx.cardview.widget.CardView>
 
@@ -40,7 +40,7 @@
         android:layout_height="wrap_content"
         android:padding="8dp"
         android:text="@string/icon"
-        android:textColor="@color/white" />
+        android:textColor="@color/grey1" />
 
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
@@ -52,7 +52,7 @@
             android:id="@+id/iconSelector"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/dark_grey"
+            android:background="@color/grey2"
             android:orientation="horizontal">
 
             <ImageView

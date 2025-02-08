@@ -33,7 +33,6 @@
     <string name="dialog_button_no">Hayır</string>
     <string name="add_video">Video ekle</string>
     <string name="music_mode">Müzik modu</string>
-    <string name="import_playlist">Listeyi içe aktar</string>
     <string name="share">Paylaş</string>
     <string name="pasted">Video yapıştırıldı.</string>
     <string name="import_success">Oynatma listesi eklendi.</string>
@@ -41,6 +40,46 @@
     <string name="music_start_point_set">Müzik başlangıç noktası ayarlandı.</string>
     <string name="no_playlists">Oynatma listesi yok.\n\nBir oynatma listesi eklemek için\n\"+\" düğmesine basın.</string>
     <string name="no_videos">Oynatma listesi boş.\n\nBir video eklemek için \n\"+\" düğmesine basın.</string>
-    <string name="timer_disabled"></string>
-    <string name="timer_set"></string>
+    <string name="timer_disabled">Zamanlayıcı devre dışı bırakıldı.</string>
+    <string name="timer_set">Video %d dakika sonra kapanacak.</string>
+    <string name="grant_permission">Depolama izni olmadan oynatma listeleri içe aktarılamaz.</string>
+    <string name="select_all">Tümünü seç</string>
+    <string name="add_to_playlist">Oynatma listesine ekle</string>
+    <string name="merge">Birleştir</string>
+    <string name="sort_playlists">Oynatma listelerini sırala</string>
+    <string name="sort_videos">Videoları sırala</string>
+    <string name="multi_choose">%d öge seçildi</string>
+    <string name="multi_remove_title">Birden çok öge sil</string>
+    <string name="multi_remove_prompt">%d öge silinsin mi?</string>
+    <string name="removed">Silindi</string>
+    <string name="merge_title">Birleştir</string>
+    <string name="merge_message">%d liste birleştirilsin mi?</string>
+    <string name="dialog_button_merge">Birleştir</string>
+    <string name="merge_success">\"%s\" adlı listede birleştirildi.</string>
+    <string name="choose_more_than_one">Lütfen en az iki liste seçin.</string>
+    <string name="auto_shut_down_title">Otomatik kapanma</string>
+    <string name="after_minutes">%d dakika sonra</string>
+    <string name="dialog_button_start">Başlat</string>
+    <string name="moved">Taşındı.</string>
+    <string name="copied">Kopyalandı.</string>
+    <string name="no_playlist_found">Bu videonun bulunmadığı bir oynatma listesi yok.</string>
+    <string name="previous">Önceki</string>
+    <string name="pause">Duraklat</string>
+    <string name="play">Çal</string>
+    <string name="next">Sonraki</string>
+    <string name="forward">İleri atla</string>
+    <string name="stop">Durdur</string>
+    <string name="already_added">Bu video zaten eklenmiş.</string>
+    <string name="speed">Hız:</string>
+    <string name="music_buttons">Müzik tuşları</string>
+    <string name="rewind_forward">Geri ve ileri sarma</string>
+    <string name="previous_next">Önceki ve sonraki</string>
+    <string name="auto_shut_down">Otomatik kapanma</string>
+    <string name="auto_shut_down_disable">İptal et</string>
+    <string name="auto_shut_down_10">10 dakika sonra</string>
+    <string name="auto_shut_down_30">30 dakika sonra</string>
+    <string name="auto_shut_down_60">60 dakika sonra</string>
+    <string name="auto_shut_down_custom">Özel</string>
+
+
 </resources>

@@ -21,7 +21,7 @@
         <item
             android:id="@+id/sort"
             android:enabled="true"
-            android:title="Videoları sırala"
+            android:title="@string/sort_videos"
             android:visible="true" />
         <item
             android:id="@+id/edit"

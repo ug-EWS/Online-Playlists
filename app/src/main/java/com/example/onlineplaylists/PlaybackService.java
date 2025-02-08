@@ -16,12 +16,9 @@ import android.media.session.PlaybackState;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
-import android.widget.RemoteViews;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
-import androidx.core.app.NotificationCompat;
 
 import com.bumptech.glide.Glide;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants;
@@ -167,6 +164,7 @@ public class PlaybackService extends Service {
                             , currentSecond * 1000L
                             , 1);
                     mediaSession.setPlaybackState(playbackState.build());
+                    spe.putBoolean("playing", isPlaying);
                 }
                 super.onStateChange(youTubePlayer, state);
             }
@@ -310,23 +308,23 @@ public class PlaybackService extends Service {
                             .setMediaSession(mediaSession.getSessionToken()))
                     .addAction(new Notification.Action.Builder(
                             Icon.createWithResource(this, R.drawable.baseline_skip_previous_24),
-                            "Önceki",
+                            getString(R.string.previous),
                             getIntentFor(ACTION_PREV)).build())
                     .addAction(new Notification.Action.Builder(
                             Icon.createWithResource(this, isPlaying ? R.drawable.baseline_pause_24 : R.drawable.baseline_play_arrow_24),
-                            isPlaying ? "Duraklat" : "Çal",
+                            getString(isPlaying ? R.string.pause : R.string.play),
                             getIntentFor(ACTION_PLAY)).build())
                     .addAction(new Notification.Action.Builder(
                             Icon.createWithResource(this, R.drawable.baseline_skip_next_24),
-                            "Sonraki",
+                            getString(R.string.next),
                             getIntentFor(ACTION_NEXT)).build())
                     .addAction(new Notification.Action.Builder(
                             Icon.createWithResource(this, R.drawable.baseline_forward_5_24),
-                            "İleri atla",
+                            getString(R.string.forward),
                             getIntentFor(ACTION_FORWARD)).build())
                     .addAction(new Notification.Action.Builder(
                             Icon.createWithResource(this, R.drawable.baseline_stop_24),
-                            "Durdur",
+                            getString(R.string.stop),
                             getIntentFor(ACTION_CLOSE)).build())
                     .setAutoCancel(false)
                     .setLargeIcon(bitmap)

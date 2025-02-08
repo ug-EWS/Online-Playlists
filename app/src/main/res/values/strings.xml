@@ -8,7 +8,15 @@
     <string name="play_next_video">Play next video</string>
     <string name="shuffle">Shuffle</string>
     <string name="music_mode">Music mode</string>
-    <string name="import_playlist">Import playlist</string>
+    <string name="music_buttons">Music buttons</string>
+    <string name="rewind_forward">Rewind and forward</string>
+    <string name="previous_next">Previous and next</string>
+    <string name="auto_shut_down">Auto shut down</string>
+    <string name="auto_shut_down_disable">Disable</string>
+    <string name="auto_shut_down_10">After 10 minutes</string>
+    <string name="auto_shut_down_30">After 30 minutes</string>
+    <string name="auto_shut_down_60">After 60 minutes</string>
+    <string name="auto_shut_down_custom">Custom</string>
     <string name="about">About</string>
 
     <!-- Playlist and video options -->
@@ -53,12 +61,42 @@
     <string name="import_success">Playlist imported.</string>
     <string name="import_fail">Playlist import failed.</string>
     <string name="music_start_point_set">Music start point has been set.</string>
-    <string name="timer_disabled"></string>
-    <string name="timer_set"></string>
+    <string name="timer_disabled">Timer disabled.</string>
+    <string name="timer_set">Player will be shut down in %d minutes.</string>
+    <string name="grant_permission">Playlists can not be imported without storage permission.</string>
 
     <!-- No playlists/videos -->
     <string name="no_playlists">There are no playlists.\n\nTap the \"+\" button\nto add a playlist.</string>
     <string name="no_videos">The playlist is empty.\n\nTap the \"+\" button\nto add a video.</string>
 
+    <!-- Misc -->
+    <string name="select_all">Select all</string>
+    <string name="add_to_playlist">Add to playlist</string>
+    <string name="merge">Merge</string>
+    <string name="sort_playlists">Sort playlists</string>
+    <string name="sort_videos">Sort videos</string>
+    <string name="multi_choose">%d items selected</string>
+    <string name="multi_remove_title">Remove multiple items</string>
+    <string name="multi_remove_prompt">Remove %d items?</string>
+    <string name="removed">Remove</string>
+    <string name="merge_title">Merge</string>
+    <string name="merge_message">Merge %d playlists?</string>
+    <string name="dialog_button_merge">Merge</string>
+    <string name="merge_success">Merged in playlist \"%s\".</string>
+    <string name="choose_more_than_one">Please choose at least two playlists.</string>
+    <string name="auto_shut_down_title">Auto shut down</string>
+    <string name="after_minutes">After %d minutes</string>
+    <string name="dialog_button_start">Start</string>
+    <string name="moved">Moved.</string>
+    <string name="copied">Copied.</string>
+    <string name="no_playlist_found">All playlists contain this video.</string>
+    <string name="previous">Previous</string>
+    <string name="pause">Pause</string>
+    <string name="play">Play</string>
+    <string name="next">Next</string>
+    <string name="forward">Forward</string>
+    <string name="stop">Stop</string>
+    <string name="already_added">This video has already been added.</string>
+    <string name="speed">Speed:</string>
 
 </resources>

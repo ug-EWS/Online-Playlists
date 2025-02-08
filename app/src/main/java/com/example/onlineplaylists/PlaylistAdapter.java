@@ -1,6 +1,9 @@
 package com.example.onlineplaylists;
 
 import android.graphics.Color;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -54,12 +57,21 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
                 : R.drawable.list_item);
 
         YouTubeVideo thisVideo = activity.currentPlaylist.getVideoAt(pos);
-        title.setText(thisVideo.title);
-        title.setTextColor(activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.playingVideoIndex == pos ? Color.GREEN : Color.WHITE);
+        title.setTextColor(activity.getColor(activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.playingVideoIndex == pos ?
+                R.color.green2 :
+                R.color.grey1));
+        if (activity.searchMode && activity.foundItemIndex == pos) {
+            SpannableString spannableString = new SpannableString(thisVideo.title);
+            spannableString.setSpan(new ForegroundColorSpan(activity.getColor(R.color.yellow)),
+                    activity.foundAtStart,
+                    activity.foundAtEnd,
+                    Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+            title.setText(spannableString, TextView.BufferType.SPANNABLE);
+        } else title.setText(thisVideo.title);
         Glide.with(activity).load(thisVideo.getThumbnailUrl()).into(thumbnail);
         OnlinePlaylistsUtils.setDimensions(activity, card, activity.isPortrait ? 128 : 80, activity.isPortrait ? 72 : 45, 0);
         OnlinePlaylistsUtils.setDimensions(activity, title, LinearLayout.LayoutParams.WRAP_CONTENT, activity.isPortrait ? ViewGroup.LayoutParams.WRAP_CONTENT : LinearLayout.LayoutParams.MATCH_PARENT, 1);
-        options.setVisibility(activity.selectionMode || activity.listSortMode ? View.GONE : View.VISIBLE);
+        options.setVisibility(activity.selectionMode || activity.listSortMode || activity.searchMode ? View.GONE : View.VISIBLE);
         checkBox.setVisibility(activity.selectionMode ? View.VISIBLE : View.GONE);
         checkBox.setChecked(activity.selectedItems.contains(position));
 
@@ -113,14 +125,15 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
                 if ((activity.currentPlaylistIndex == activity.playingPlaylistIndex && position == activity.playingVideoIndex))
                     if (activity.isPlaying) activity.youTubePlayer.pause();
                     else activity.youTubePlayer.play();
-                else activity.playVideo(position, true);
+                else activity.playVideo(position, true, true);
             }
+            if (activity.searchMode) activity.setSearchMode(false);
         });
     }
 
     private void setItemOnLongClickListener(View _view, int position) {
         _view.setOnLongClickListener(view -> {
-            if (!(activity.selectionMode || activity.listSortMode)) {
+            if (!(activity.selectionMode || activity.listSortMode || activity.searchMode)) {
                 activity.selectedItems = new ArrayList<>();
                 activity.selectedItems.add(position);
                 activity.setSelectionMode(true);

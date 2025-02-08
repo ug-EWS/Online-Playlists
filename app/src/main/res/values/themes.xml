@@ -1,16 +1,16 @@
 <resources>
     <!-- Base application theme. -->
-    <style name="Theme.OnlinePlaylists" parent="Theme.MaterialComponents.NoActionBar">
+    <style name="Theme.OnlinePlaylists" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/dark_grey</item>
-        <item name="colorPrimaryVariant">@color/black</item>
-        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimary">@color/grey2</item>
+        <item name="colorPrimaryVariant">@color/grey0</item>
+        <item name="colorOnPrimary">@color/grey1</item>
         <!-- Secondary brand color. -->
         <item name="colorSecondary">@color/soft_red</item>
         <item name="colorSecondaryVariant">@color/red</item>
-        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorOnSecondary">@color/grey1</item>
         <!-- Status bar color. -->
-        <item name="android:statusBarColor">@color/dark_grey</item>
+        <item name="android:statusBarColor">@color/grey2</item>
         <item name="android:navigationBarColor">@color/transparent</item>
 
         <!-- Customize your theme here. -->

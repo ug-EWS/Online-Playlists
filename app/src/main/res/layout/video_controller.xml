@@ -165,7 +165,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="start"
                     android:padding="8dp"
-                    android:text="Hız:" />
+                    android:text="@string/speed" />
 
                 <TextView
                     android:id="@+id/speedText"

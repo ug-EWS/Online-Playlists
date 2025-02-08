@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="grey0" format="color"/>
+    <attr name="grey1" format="color"/>
+    <attr name="grey2" format="color"/>
+    <attr name="grey3" format="color"/>
+    <attr name="grey4" format="color"/>
+    <attr name="grey5" format="color"/>
+    <attr name="grey6" format="color"/>
+    <attr name="grey7" format="color"/>
+    <attr name="green1" format="color"/>
+    <attr name="green2" format="color"/>
+    <attr name="yellow" format="color"/>
+</resources>

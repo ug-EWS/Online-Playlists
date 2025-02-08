@@ -39,7 +39,7 @@ class VideoDialog {
     @SuppressLint("SetJavaScriptEnabled")
     VideoDialog(MainActivity _activity) {
         activity = _activity;
-        builder = new AlertDialog.Builder(activity, R.style.Theme_OnlinePlaylistsDialogDark);
+        builder = new AlertDialog.Builder(activity, R.style.Theme_OnlinePlaylistsDialog);
         dialog = builder.create();
         dialog.setTitle(activity.getString(R.string.add_video));
 
@@ -72,7 +72,7 @@ class VideoDialog {
         addButton.setOnClickListener(view -> {
             String id = YouTubeVideo.getVideoIdFrom(url);
             if (activity.currentPlaylist.contains(id)) {
-                activity.showMessage("Bu video zaten eklenmiş.");
+                activity.showMessage(R.string.already_added);
             }
             else {
                 title = title.replace(" - YouTube", "");

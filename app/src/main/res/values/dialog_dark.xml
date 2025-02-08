@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
     <resources xmlns:tools="http://schemas.android.com/tools">
         <!-- Base application theme. -->
-        <style name="Theme.OnlinePlaylistsDialogDark" parent="Theme.AppCompat.Dialog.Alert">
-            <item name="android:colorBackground">@color/very_dark_grey</item>
-        </style>
+    <style name="Theme.OnlinePlaylistsDialog" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="android:colorBackground">@color/grey3</item>
+        <item name="android:textColor">@color/grey1</item>
+        <item name="android:textColorPrimary">@color/grey1</item>
+    </style>
     </resources>

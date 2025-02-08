@@ -7,23 +7,24 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 
 public class AutoShutDownDialog {
-    AlertDialog dialog;
-    AlertDialog.Builder builder;
-    MainActivity activity;
-    int minutes;
+    private AlertDialog dialog;
+    private AlertDialog.Builder builder;
+    private MainActivity activity;
+    private int minutes;
+    private TextView textView;
+    private SeekBar seekBar;
 
     AutoShutDownDialog(MainActivity _activity) {
         activity = _activity;
-        builder = new AlertDialog.Builder(activity, R.style.Theme_OnlinePlaylistsDialogDark);
-        builder.setTitle("Otomatik kapanma");
+        builder = new AlertDialog.Builder(activity, R.style.Theme_OnlinePlaylistsDialog);
+        builder.setTitle(R.string.auto_shut_down_title);
         View view = activity.getLayoutInflater().inflate(R.layout.auto_shut_down, null);
-        TextView textView = view.findViewById(R.id.textView);
-        SeekBar seekBar = view.findViewById(R.id.seekBar);
+        textView = view.findViewById(R.id.textView);
+        seekBar = view.findViewById(R.id.seekBar);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                minutes = (seekBar.getProgress() + 1) * 10;
-                textView.setText(String.format("%d dakika sonra", minutes));
+                setMinutes();
             }
 
             @Override
@@ -36,11 +37,17 @@ public class AutoShutDownDialog {
 
             }
         });
+        setMinutes();
         builder.setView(view);
-        builder.setPositiveButton("Başlat", (dialog1, which) ->
+        builder.setPositiveButton(R.string.dialog_button_start, (dialog1, which) ->
                 activity.startTimer(minutes * 60000L));
-        builder.setNegativeButton("İptal", null);
+        builder.setNegativeButton(R.string.dialog_button_cancel, null);
         dialog = builder.create();
+    }
+
+    private void setMinutes() {
+        minutes = (seekBar.getProgress() + 1) * 10;
+        textView.setText(String.format(activity.getString(R.string.after_minutes), minutes));
     }
 
     public void show() {

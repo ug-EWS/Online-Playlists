@@ -15,7 +15,7 @@
             android:id="@+id/addToPlaylist"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:title="Oynatma listesine ekle" />
+            android:title="@string/add_to_playlist" />
         <item
             android:id="@+id/cut"
             android:title="@string/cut"

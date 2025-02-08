@@ -15,6 +15,7 @@ class ManagePlaylistsDialog {
     YouTubeVideo video;
 
     ArrayList<CharSequence> items;
+    ArrayList<Integer> forVideos;
     ArrayList<Integer> originalIndexes;
     boolean[] contains;
     CharSequence[] itemsArr;
@@ -45,17 +46,16 @@ class ManagePlaylistsDialog {
             contains[which] = isChecked;
         });
 
-        builder.setPositiveButton(R.string.dialog_button_add, (dialog1, which) -> {
-            for (int i = 0; i < length2; i++) {
-                Playlist playlist = listOfPlaylists.getPlaylistAt(originalIndexes.get(i));
-                if (contains[i]) {
-                    playlist.addVideo(video);
-                }
-            }
-            activity.showMessage("Eklendi");
+        builder.setPositiveButton(R.string.copy, (dialog1, which) -> {
+            copyVideo();
+            activity.showMessage(R.string.copied);
         });
 
-        builder.setNegativeButton(R.string.dialog_button_cancel, (dialog1, which) -> dialog.dismiss());
+        builder.setNeutralButton(R.string.move, (dialog1, which) -> {
+            copyVideo();
+            currentPlaylist.removeVideo(_forVideo);
+            activity.showMessage(R.string.moved);
+        });
         dialog = builder.create();
     }
 
@@ -63,6 +63,7 @@ class ManagePlaylistsDialog {
         initializeDialog(_activity);
         items = new ArrayList<>();
         originalIndexes = new ArrayList<>();
+        forVideos = _forVideos;
 
         length = listOfPlaylists.getLength();
 
@@ -70,6 +71,7 @@ class ManagePlaylistsDialog {
             if (activity.currentPlaylistIndex != i) {
                 Playlist playlist = listOfPlaylists.getPlaylistAt(i);
                 items.add(playlist.title);
+                originalIndexes.add(i);
             }
         }
 
@@ -80,20 +82,18 @@ class ManagePlaylistsDialog {
             contains[which] = isChecked;
         });
 
-        builder.setPositiveButton(R.string.dialog_button_add, (dialog1, which) -> {
-            for (int i = 0; i < length; i++) {
-                if (contains[i]) {
-                    Playlist playlist = listOfPlaylists.getPlaylistAt(i);
-                    for (int j = _forVideos.size() - 1; j >= 0; j--) {
-                        YouTubeVideo youTubeVideo = activity.currentPlaylist.getVideoAt(_forVideos.get(j));
-                        if (!playlist.contains(youTubeVideo)) playlist.addVideo(youTubeVideo);
-                    }
-                }
-            }
+        builder.setPositiveButton(R.string.copy, (dialog1, which) -> {
+            copyVideos();
             activity.setSelectionMode(false);
-            activity.showMessage("Eklendi");
+            activity.showMessage(R.string.copied);
         });
 
+        builder.setNeutralButton(R.string.move, (dialog1, which) -> {
+            copyVideos();
+            currentPlaylist.removeVideos(forVideos);
+            activity.setSelectionMode(false);
+            activity.showMessage(R.string.moved);
+        });
         dialog = builder.create();
     }
 
@@ -102,13 +102,34 @@ class ManagePlaylistsDialog {
         listOfPlaylists = activity.listOfPlaylists;
         currentPlaylist = activity.currentPlaylist;
 
-        builder = new AlertDialog.Builder(activity, R.style.Theme_OnlinePlaylistsDialogDark);
-        builder.setTitle("Oynatma listesine ekle");
+        builder = new AlertDialog.Builder(activity, R.style.Theme_OnlinePlaylistsDialog);
+        builder.setTitle(R.string.add_to_playlist);
         builder.setNegativeButton(R.string.dialog_button_cancel, null);
     }
 
+    private void copyVideo() {
+        for (int i = 0; i < length2; i++) {
+            Playlist playlist = listOfPlaylists.getPlaylistAt(originalIndexes.get(i));
+            if (contains[i]) {
+                playlist.addVideo(video);
+            }
+        }
+    }
+
+    private void copyVideos() {
+        for (int i = 0; i < length; i++) {
+            if (contains[i]) {
+                Playlist playlist = listOfPlaylists.getPlaylistAt(originalIndexes.get(i));
+                for (int j = forVideos.size() - 1; j >= 0; j--) {
+                    YouTubeVideo youTubeVideo = activity.currentPlaylist.getVideoAt(forVideos.get(j));
+                    if (!playlist.contains(youTubeVideo)) playlist.addVideo(youTubeVideo);
+                }
+            }
+        }
+    }
+
     public void show() {
-        if (items.isEmpty()) activity.showMessage("Bu videonun bulunmadığı bir oynatma listesi yok.");
+        if (items.isEmpty()) activity.showMessage(R.string.no_playlist_found);
         else dialog.show();
     }
 }

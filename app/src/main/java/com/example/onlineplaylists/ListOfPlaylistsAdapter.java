@@ -1,6 +1,15 @@
 package com.example.onlineplaylists;
 
 import android.graphics.Color;
+import android.os.Parcelable;
+import android.text.Editable;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.TextPaint;
+import android.text.style.CharacterStyle;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.UpdateAppearance;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -60,13 +69,21 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         int iconIndex = activity.listOfPlaylists.getPlaylistAt(pos).icon;
         if (iconIndex > 4 || iconIndex < 0) iconIndex = 0;
         icon.setImageResource(icons[iconIndex]);
-        title.setText(activity.listOfPlaylists.getPlaylistAt(pos).title);
+        String titleStr = activity.listOfPlaylists.getPlaylistAt(pos).title;
+        if (activity.searchMode && activity.foundItemIndex == pos) {
+            SpannableString spannableString = new SpannableString(titleStr);
+            spannableString.setSpan(new ForegroundColorSpan(activity.getColor(R.color.yellow)),
+                    activity.foundAtStart,
+                    activity.foundAtEnd,
+                    Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+            title.setText(spannableString, TextView.BufferType.SPANNABLE);
+        } else title.setText(titleStr);
         size.setText(String.valueOf(activity.listOfPlaylists.getPlaylistAt(pos).getLength()).concat(" video"));
-        title.setTextColor(activity.playingPlaylistIndex == pos ? Color.GREEN : Color.WHITE);
+        title.setTextColor(activity.getColor(activity.playingPlaylistIndex == pos ? R.color.green2 : R.color.grey1));
 
         checkBox.setVisibility(activity.selectionMode ? View.VISIBLE : View.GONE);
         checkBox.setChecked(activity.selectedItems.contains(position));
-        options.setVisibility(activity.selectionMode || activity.listSortMode ? View.GONE : View.VISIBLE);
+        options.setVisibility(activity.selectionMode || activity.listSortMode || activity.searchMode ? View.GONE : View.VISIBLE);
 
         PopupMenu popupMenu = activity.getPlaylistPopupMenu(options, false, pos);
 
@@ -116,11 +133,12 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                 }
             }
             else activity.openPlaylist(position);
+            if (activity.searchMode) activity.setSearchMode(false);
         });
     }
     private void setItemOnLongClickListener(View _view, int position) {
         _view.setOnLongClickListener(view -> {
-            if (!(activity.selectionMode || activity.listSortMode)) {
+            if (!(activity.selectionMode || activity.listSortMode || activity.searchMode)) {
                 activity.selectedItems = new ArrayList<>();
                 activity.selectedItems.add(position);
                 activity.setSelectionMode(true);

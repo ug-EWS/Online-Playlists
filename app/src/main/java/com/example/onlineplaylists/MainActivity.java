@@ -5,6 +5,7 @@ import static android.content.pm.PackageManager.PERMISSION_DENIED;
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
+import android.app.UiModeManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -16,8 +17,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
-import android.os.Vibrator;
 import android.provider.Settings;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.View;
@@ -25,11 +27,14 @@ import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.Toolbar;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
@@ -37,6 +42,7 @@ import androidx.activity.SystemBarStyle;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
@@ -57,22 +63,27 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTube
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 public class MainActivity extends AppCompatActivity {
     YouTubePlayer youTubePlayer;
 
-    private CoordinatorLayout coordinatorLayout;
     private YouTubePlayerView youTubePlayerView;
-    private LinearLayout layout, list, musicController, bottomMainControls, speedControls;
+    private LinearLayout layout, list, musicController, bottomMainControls, speedControls, toolbar, searchBar;
+    private CoordinatorLayout coordinatorLayout;
     private ConstraintLayout videoController;
     private ImageView icon, options, settings, selectAllButton, removeButton, addToPlaylistButton,
             replayButton, playButton, forwardButton, videoReplay, videoPlay, videoForward,
-            openInYouTube, speed, fullscreen, speedBack, videoPrevious, videoNext, mergeButton;
+            openInYouTube, speed, fullscreen, speedBack, videoPrevious, videoNext, mergeButton, cancelSearchButton, findUpButton, findDownButton, searchButton;
     private TextView musicTitle, videoCurrent, videoLength, speedText, noPlaylistsText, noVideosText;
+    private EditText searchEditText;
     private FloatingActionButton addButton;
     private SeekBar seekBar, speedBar;
     private RecyclerView listOfPlaylistsRecycler;
@@ -92,7 +103,11 @@ public class MainActivity extends AppCompatActivity {
             playingVideoIndex = -1,
             playMode = 0,
             currentSecond = 0,
-            videoDuration = 0;
+            videoDuration = 0,
+            foundItemIndex = -1,
+            foundAtStart = -1,
+            foundAtEnd = -1,
+            theme = 0;
 
     private long timerMs;
 
@@ -102,16 +117,10 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences sp;
     private SharedPreferences.Editor spe;
 
-    boolean viewMode, isPlaying, listSortMode, selectionMode;
+    boolean viewMode, isPlaying, listSortMode, selectionMode, searchMode, darkMode;
     boolean isPortrait;
-    private boolean isFullscreen;
-    private boolean shuffle;
-    private boolean musicMode;
-    private boolean showController;
-    private boolean serviceRunning;
-    private boolean areControlsVisible;
-    private boolean musicControlsMode;
-    private boolean timerSet;
+    private boolean isFullscreen, shuffle, musicMode, showController, serviceRunning, areControlsVisible,
+            musicControlsMode, timerSet;
 
     private ArrayList<Integer> playlistIndexes;
     ArrayList<Integer> selectedItems;
@@ -133,7 +142,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this, SystemBarStyle.dark(getColor(R.color.dark_grey)), SystemBarStyle.dark(Color.TRANSPARENT));
+        EdgeToEdge.enable(this,
+                darkMode ? SystemBarStyle.dark(getColor(R.color.dark_grey)) : SystemBarStyle.light(getColor(R.color.light_grey), getColor(R.color.dark_grey)),
+                darkMode ? SystemBarStyle.dark(Color.TRANSPARENT) : SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT));
         setContentView(R.layout.activity_main);
 
         sp = getSharedPreferences("OnlinePlaylists", MODE_PRIVATE);
@@ -143,6 +154,7 @@ public class MainActivity extends AppCompatActivity {
         shuffle = sp.getBoolean("shuffle", false);
         musicMode = sp.getBoolean("musicMode", false);
         musicControlsMode = sp.getBoolean("musicControlsMode", true);
+        theme = sp.getInt("theme", 0);
 
         playlistDialog = new PlaylistDialog(this, -1);
         videoDialog = new VideoDialog(this);
@@ -168,6 +180,8 @@ public class MainActivity extends AppCompatActivity {
     private void back() {
         if (isFullscreen) {
             setFullscreen(false);
+        } else if (searchMode) {
+            setSearchMode(false);
         } else if (listSortMode) {
             setListSortMode(false);
         } else if (selectionMode) {
@@ -205,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 101) {
             if (grantResults[0] == PERMISSION_DENIED) {
-                showMessage("İzin olmadan oynatma listeleri içe aktarılamaz.");
+                showMessage(getString(R.string.grant_permission));
             } else {
                 uri = getIntent().getData();
                 importPlaylist();
@@ -215,6 +229,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        darkMode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ?
+                newConfig.isNightModeActive() :
+                (newConfig.uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         setOrientation(newConfig.orientation == Configuration.ORIENTATION_PORTRAIT);
         super.onConfigurationChanged(newConfig);
     }
@@ -268,7 +285,7 @@ public class MainActivity extends AppCompatActivity {
         timerSet = true;
         timerMs = Calendar.getInstance().getTimeInMillis() + millis;
         setTimer();
-        showMessage(String.format("Video %d dakika sonra kapanacak.", (int)(millis / 60000)));
+        showMessage(String.format(getString(R.string.timer_set), (int)(millis / 60000)));
     }
 
     private void setTimer() {
@@ -295,13 +312,13 @@ public class MainActivity extends AppCompatActivity {
         int cpi = sp.getInt("currentPlaylistIndex", 0);
         int cvi = sp.getInt("currentVideoIndex", 0);
         int cs = sp.getInt("currentSecond", 0);
+        boolean play = sp.getBoolean("playing", true);
         openPlaylist(cpi, cvi);
-        playVideo(cvi, cs, true);
+        playVideo(cvi, cs, true, play);
         spe.putBoolean("serviceRunning", false);
     }
 
     private void initializeUi() {
-        coordinatorLayout = findViewById(R.id.coordinatorLayout);
         youTubePlayerView = findViewById(R.id.youTubePlayerView);
         layout = findViewById(R.id.layoutMain);
         list = findViewById(R.id.list);
@@ -333,7 +350,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onStateChange(@NonNull YouTubePlayer _youTubePlayer, @NonNull PlayerConstants.PlayerState state) {
                 if (state == PlayerConstants.PlayerState.ENDED) {
-                    if (playMode == 1) playVideo(playingVideoIndex, false);
+                    if (playMode == 1) playVideo(playingVideoIndex, false, true);
                     if (playMode == 2 && shuffle) playRandom();
                     if (playMode == 2 && !shuffle) playNext();
                 } else {
@@ -489,14 +506,47 @@ public class MainActivity extends AppCompatActivity {
         noPlaylistsText = findViewById(R.id.noPlaylists);
         noVideosText = findViewById(R.id.noVideos);
 
+        toolbar = findViewById(R.id.toolbar);
+        searchBar = findViewById(R.id.searchBar);
+        cancelSearchButton = findViewById(R.id.cancelSearchButton);
+        cancelSearchButton.setOnClickListener(v -> setSearchMode(false));
+        searchEditText = findViewById(R.id.searchEditText);
+        searchEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                findItem(false, true);
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+        findUpButton = findViewById(R.id.findUpButton);
+        findUpButton.setOnClickListener(v -> findItem(true, false));
+        findDownButton = findViewById(R.id.findDownButton);
+        findDownButton.setOnClickListener(v -> findItem(false, false));
+        searchButton = findViewById(R.id.search);
+        searchButton.setOnClickListener(v -> setSearchMode(true));
+
         selectAllButton.setOnClickListener(v -> selectAllItems());
         removeButton.setOnClickListener(v -> removeItems());
         addToPlaylistButton.setOnClickListener(v -> addItemsToPlaylist());
         mergeButton.setOnClickListener(v -> mergeItems());
-        selectAllButton.setTooltipText("Tümünü seç");
-        removeButton.setTooltipText("Sil");
-        addToPlaylistButton.setTooltipText("Oynatma listesine ekle");
-        mergeButton.setTooltipText("Birleştir");
+        selectAllButton.setTooltipText(getText(R.string.select_all));
+        removeButton.setTooltipText(getText(R.string.delete));
+        addToPlaylistButton.setTooltipText(getText(R.string.add_to_playlist));
+        mergeButton.setTooltipText(getText(R.string.merge));
+
+        coordinatorLayout = findViewById(R.id.coordinatorLayout);
+
+        ViewCompat.setOnApplyWindowInsetsListener(coordinatorLayout, (v, insets) -> {
+            Insets insets1 = insets.getInsets(WindowInsetsCompat.Type.navigationBars());
+            Insets insets2 = insets.getInsets(WindowInsetsCompat.Type.ime());
+            v.setPadding(insets1.left, 0, insets1.right, insets2.bottom);
+            return insets;
+        });
 
         ViewCompat.setOnApplyWindowInsetsListener(addButton, (v, insets) -> {
             Insets insets1 = insets.getInsets(WindowInsetsCompat.Type.navigationBars());
@@ -571,7 +621,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void removePlaylist(int index) {
-        AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this, R.style.Theme_OnlinePlaylistsDialogDark);
+        AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this, R.style.Theme_OnlinePlaylistsDialog);
         b.setTitle(listOfPlaylists.getPlaylistAt(index).title);
         b.setMessage(getString(R.string.delete_playlist_alert));
         b.setPositiveButton(getString(R.string.dialog_button_delete) , ((dialog, which) -> {
@@ -616,7 +666,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void removeVideo(int index) {
-        AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this, R.style.Theme_OnlinePlaylistsDialogDark);
+        AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this, R.style.Theme_OnlinePlaylistsDialog);
         b.setTitle(currentPlaylist.getVideoAt(index).title);
         b.setMessage(getString(R.string.delete_video_alert));
         b.setPositiveButton(getString(R.string.dialog_button_delete), ((dialog, which) -> {
@@ -636,6 +686,9 @@ public class MainActivity extends AppCompatActivity {
         if (playMode == 0) menu.findItem(R.id.doNothing).setChecked(true);
         if (playMode == 1) menu.findItem(R.id.replayButton).setChecked(true);
         if (playMode == 2) menu.findItem(R.id.playNextVideo).setChecked(true);
+        if (theme == 0) menu.findItem(R.id.autoTheme).setChecked(true);
+        if (theme == 1) menu.findItem(R.id.lightTheme).setChecked(true);
+        if (theme == 2) menu.findItem(R.id.darkTheme).setChecked(true);
         menu.findItem(R.id.autoDisabled).setEnabled(timerSet);
         menu.findItem(R.id.auto10Min).setEnabled(!timerSet);
         menu.findItem(R.id.auto30Min).setEnabled(!timerSet);
@@ -676,7 +729,7 @@ public class MainActivity extends AppCompatActivity {
             if (itemIndex == R.id.autoDisabled) {
                 timerSet = false;
                 setTimer();
-                showMessage("Zamanlayıcı devre dışı bırakıldı.");
+                showMessage(getString(R.string.timer_disabled));
                 return false;
             }
             if (itemIndex == R.id.auto10Min) {
@@ -707,6 +760,36 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
 
+            if (itemIndex == R.id.lightTheme) {
+                theme = 1;
+                item.setChecked(true);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                    ((UiModeManager) getSystemService(UI_MODE_SERVICE)).setApplicationNightMode(UiModeManager.MODE_NIGHT_NO);
+                else AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+                startActivity(new Intent(this, MainActivity.class));
+                return true;
+            }
+
+            if (itemIndex == R.id.darkTheme) {
+                theme = 2;
+                item.setChecked(true);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                    ((UiModeManager) getSystemService(UI_MODE_SERVICE)).setApplicationNightMode(UiModeManager.MODE_NIGHT_YES);
+                else AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+                startActivity(new Intent(this, MainActivity.class));
+                return true;
+            }
+
+            if (itemIndex == R.id.autoTheme) {
+                theme = 0;
+                item.setChecked(true);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                    ((UiModeManager) getSystemService(UI_MODE_SERVICE)).setApplicationNightMode(UiModeManager.MODE_NIGHT_AUTO);
+                else AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+                startActivity(new Intent(this, MainActivity.class));
+                return true;
+            }
+
             if (itemIndex == R.id.about) {
                 return true;
             }
@@ -722,6 +805,7 @@ public class MainActivity extends AppCompatActivity {
                 .putBoolean("musicControlsMode", musicControlsMode)
                 .putBoolean("timerSet", timerSet)
                 .putLong("timerMs", timerMs)
+                .putInt("theme", theme)
                 .commit();
         spe.putString("playlists", listOfPlaylists.getJson()).apply();
     }
@@ -768,11 +852,11 @@ public class MainActivity extends AppCompatActivity {
         playlistRecycler.scrollToPosition(scroll);
     }
 
-    void playVideo(int index, boolean switchPlaylist) {
-        playVideo(index, musicMode ? currentPlaylist.getVideoAt(index).musicStartSeconds : 0, switchPlaylist);
+    void playVideo(int index, boolean switchPlaylist, boolean autoPlay) {
+        playVideo(index, musicMode ? currentPlaylist.getVideoAt(index).musicStartSeconds : 0, switchPlaylist, autoPlay);
     }
 
-    private void playVideo(int index, int startSecond, boolean switchPlaylist) {
+    private void playVideo(int index, int startSecond, boolean switchPlaylist, boolean autoPlay) {
         if (youTubePlayer == null) {
             showMessage(getString(R.string.player_not_ready));
         } else {
@@ -797,7 +881,8 @@ public class MainActivity extends AppCompatActivity {
                 playlistRecycler.getAdapter().notifyItemChanged(index);
             }
 
-            youTubePlayer.loadVideo(playingVideo.id, startSecond);
+            if (autoPlay) youTubePlayer.loadVideo(playingVideo.id, startSecond);
+            else youTubePlayer.cueVideo(playingVideo.id, startSecond);
         }
     }
 
@@ -820,18 +905,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void playPrevious() {
         int index = playingVideoIndex == 0 ? currentPlaylist.getLength()-1 : playingVideoIndex - 1;
-        playVideo(index, false);
+        playVideo(index, false, true);
     }
 
     private void playNext() {
         int index = playingVideoIndex == currentPlaylist.getLength()-1 ? 0 : playingVideoIndex + 1;
-        playVideo(index, false);
+        playVideo(index, false, true);
     }
 
     private void playRandom() {
         if (playlistIndexes.isEmpty()) for (int i = 0; i < currentPlaylist.getLength(); i++) playlistIndexes.add(i);
         int index = playlistIndexes.get(new Random().nextInt(playlistIndexes.size()));
-        playVideo(index, false);
+        playVideo(index, false, true);
     }
 
     void closePlayer() {
@@ -839,6 +924,10 @@ public class MainActivity extends AppCompatActivity {
         playingVideoIndex = -1;
         youTubePlayer.pause();
         setControllerVisibility(false);
+    }
+
+    void showMessage(int resId) {
+        showMessage(getString(resId));
     }
 
     void showMessage(String text) {
@@ -873,23 +962,33 @@ public class MainActivity extends AppCompatActivity {
 
     void setSelectionMode(boolean _selectionMode) {
         selectionMode = _selectionMode;
-        if (viewMode) playlistAdapter.notifyDataSetChanged();
-        else listOfPlaylistsAdapter.notifyDataSetChanged();
+        (viewMode ? playlistAdapter : listOfPlaylistsAdapter).notifyDataSetChanged();
         updateToolbar();
     }
 
     void setListSortMode(boolean _listSortMode) {
         listSortMode = _listSortMode;
-        if (viewMode) playlistAdapter.notifyDataSetChanged();
-        else listOfPlaylistsAdapter.notifyDataSetChanged();
+        (viewMode ? playlistAdapter : listOfPlaylistsAdapter).notifyDataSetChanged();
+        updateToolbar();
+    }
+
+    void setSearchMode(boolean _searchMode) {
+        searchMode = _searchMode;
+        foundItemIndex = -1;
+        (viewMode ? playlistAdapter : listOfPlaylistsAdapter).notifyDataSetChanged();
+        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (searchMode) imm.showSoftInput(searchEditText, InputMethodManager.SHOW_IMPLICIT);
+        else imm.hideSoftInputFromWindow(searchBar.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
         updateToolbar();
     }
 
     void updateToolbar() {
+        toolbar.setVisibility(searchMode ? View.GONE : View.VISIBLE);
+        searchBar.setVisibility(searchMode ? View.VISIBLE : View.GONE);
         titleText.setText(
-                listSortMode && viewMode ? "Videoları sırala"
-                        : listSortMode ? "Oynatma listelerini sırala"
-                        : selectionMode ? String.format("%d öge seçildi", selectedItems.size())
+                listSortMode && viewMode ? getString(R.string.sort_videos)
+                        : listSortMode ? getString(R.string.sort_playlists)
+                        : selectionMode ? String.format(getString(R.string.multi_choose), selectedItems.size())
                         : viewMode ? currentPlaylist.title
                         : getString(R.string.app_name));
         icon.setImageResource(selectionMode ? R.drawable.baseline_close_24
@@ -902,7 +1001,8 @@ public class MainActivity extends AppCompatActivity {
         removeButton.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
         addToPlaylistButton.setVisibility(selectionMode && viewMode ? View.VISIBLE : View.GONE);
         mergeButton.setVisibility(selectionMode && !viewMode ? View.VISIBLE : View.GONE);
-        addButton.setVisibility(selectionMode || listSortMode ? View.GONE : View.VISIBLE);
+        searchButton.setVisibility(selectionMode || listSortMode ? View.GONE : View.VISIBLE);
+        addButton.setVisibility(selectionMode || listSortMode || searchMode ? View.GONE : View.VISIBLE);
     }
 
     void updateNoItemsView() {
@@ -928,9 +1028,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void removeItems() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_OnlinePlaylistsDialogDark);
-        builder.setTitle("Birden çok öge sil");
-        builder.setMessage(String.format("%d öge silinsin mi?", selectedItems.size()));
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_OnlinePlaylistsDialog);
+        builder.setTitle(R.string.multi_remove_title);
+        builder.setMessage(String.format(getString(R.string.multi_remove_prompt), selectedItems.size()));
         builder.setPositiveButton(R.string.dialog_button_delete, (dialog, which) -> {
             if (viewMode) {
                 currentPlaylist.removeVideos(selectedItems);
@@ -940,7 +1040,7 @@ public class MainActivity extends AppCompatActivity {
                 listOfPlaylists.removePlaylists(selectedItems);
                 if (selectedItems.contains(playingPlaylistIndex)) closePlayer();
             }
-            showMessage("Silindi.");
+            showMessage(getString(R.string.removed));
             selectedItems.clear();
             setSelectionMode(false);
             updateNoItemsView();
@@ -955,19 +1055,46 @@ public class MainActivity extends AppCompatActivity {
 
     private void mergeItems() {
         if (selectedItems.size() > 1) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_OnlinePlaylistsDialogDark);
-            builder.setTitle("Birleştir");
-            builder.setMessage(String.format("%d liste birleştirilsin mi?", selectedItems.size()));
-            builder.setPositiveButton("Birleştir", (dialog, which) -> {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_OnlinePlaylistsDialog);
+            builder.setTitle(R.string.merge_title);
+            builder.setMessage(String.format(getString(R.string.merge_message), selectedItems.size()));
+            builder.setPositiveButton(R.string.dialog_button_merge, (dialog, which) -> {
                 String s = listOfPlaylists.mergePlaylists(selectedItems);
                 selectedItems.clear();
                 setSelectionMode(false);
-                showMessage(String.format("\"%s\" adlı listede birleştirildi", s));
+                showMessage(String.format(getString(R.string.merge_success), s));
             });
-            builder.setNegativeButton("İptal", null);
+            builder.setNegativeButton(R.string.dialog_button_cancel, null);
             builder.create().show();
         } else {
-            showMessage("Lütfen en az iki liste seçin.");
+            showMessage(getString(R.string.choose_more_than_one));
+        }
+    }
+
+    private void findItem(boolean up, boolean _new) {
+        int f = foundItemIndex;
+        int i = _new ? -1 : foundItemIndex;
+        String query = searchEditText.getText().toString().toLowerCase();
+        Function<Integer, String> title =
+                viewMode ? (index) -> currentPlaylist.getVideoAt(index).title
+                        : (index) -> listOfPlaylists.getPlaylistAt(index).title;
+        Supplier<Integer> length =
+                viewMode ? () -> currentPlaylist.getLength() : () -> listOfPlaylists.getLength();
+        if (!query.isEmpty()) {
+            while (up && i > 0 || !up && i < length.get() - 1) {
+                if (up) i--;
+                else i++;
+                String title1 = title.apply(i).toLowerCase();
+                if (title1.contains(query)) {
+                    foundItemIndex = i;
+                    foundAtStart = title1.indexOf(query);
+                    foundAtEnd = foundAtStart + query.length();
+                    break;
+                }
+            }
+            (viewMode ? playlistAdapter : listOfPlaylistsAdapter).notifyItemChanged(f);
+            (viewMode ? playlistAdapter : listOfPlaylistsAdapter).notifyItemChanged(foundItemIndex);
+            (viewMode ? playlistRecycler : listOfPlaylistsRecycler).scrollToPosition(foundItemIndex);
         }
     }
 
