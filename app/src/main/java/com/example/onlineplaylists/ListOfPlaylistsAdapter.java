@@ -1,15 +1,9 @@
 package com.example.onlineplaylists;
 
-import android.graphics.Color;
-import android.os.Parcelable;
-import android.text.Editable;
-import android.text.Spannable;
+import android.content.Context;
 import android.text.SpannableString;
 import android.text.Spanned;
-import android.text.TextPaint;
-import android.text.style.CharacterStyle;
 import android.text.style.ForegroundColorSpan;
-import android.text.style.UpdateAppearance;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -181,5 +175,10 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     @Override
     public void onSwipe(@NonNull RecyclerView.ViewHolder viewHolder, int i) {
         activity.removePlaylist(viewHolder.getAdapterPosition());
+    }
+
+    @Override
+    public Context getContext() {
+        return activity;
     }
 }

@@ -6,8 +6,7 @@
 
     android:id="@+id/coordinatorLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/back">
+    android:layout_height="match_parent">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -270,46 +269,54 @@
 
                 </LinearLayout>
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/listOfPlaylistsRecycler"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:clipToPadding="false"
-                    android:paddingBottom="140dp"
-                    android:scrollbarAlwaysDrawVerticalTrack="true"
-                    android:scrollbarStyle="outsideOverlay"
-                    android:scrollbars="vertical"
-                    app:fastScrollEnabled="false">
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/back"
+                    android:orientation="vertical">
 
-                </androidx.recyclerview.widget.RecyclerView>
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/listOfPlaylistsRecycler"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:clipToPadding="false"
+                        android:paddingBottom="140dp"
+                        android:scrollbarAlwaysDrawVerticalTrack="true"
+                        android:scrollbarStyle="outsideOverlay"
+                        android:scrollbars="vertical"
+                        app:fastScrollEnabled="false">
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/playlistRecycler"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:clipToPadding="false"
-                    android:paddingBottom="140dp"
-                    android:scrollbarAlwaysDrawVerticalTrack="true"
-                    android:scrollbarStyle="outsideOverlay"
-                    android:scrollbars="vertical">
+                    </androidx.recyclerview.widget.RecyclerView>
 
-                </androidx.recyclerview.widget.RecyclerView>
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/playlistRecycler"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:clipToPadding="false"
+                        android:paddingBottom="140dp"
+                        android:scrollbarAlwaysDrawVerticalTrack="true"
+                        android:scrollbarStyle="outsideOverlay"
+                        android:scrollbars="vertical">
 
-                <TextView
-                    android:id="@+id/noPlaylists"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:text="@string/no_playlists"
-                    android:textSize="16sp" />
+                    </androidx.recyclerview.widget.RecyclerView>
 
-                <TextView
-                    android:id="@+id/noVideos"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:text="@string/no_videos"
-                    android:textSize="16sp" />
+                    <TextView
+                        android:id="@+id/noPlaylists"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:text="@string/no_playlists"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/noVideos"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:text="@string/no_videos"
+                        android:textSize="16sp" />
+                </LinearLayout>
 
             </LinearLayout>
 

@@ -164,7 +164,7 @@ public class PlaybackService extends Service {
                             , currentSecond * 1000L
                             , 1);
                     mediaSession.setPlaybackState(playbackState.build());
-                    spe.putBoolean("playing", isPlaying);
+                    spe.putBoolean("playing", isPlaying).commit();
                 }
                 super.onStateChange(youTubePlayer, state);
             }

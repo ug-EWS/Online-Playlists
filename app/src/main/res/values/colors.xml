@@ -7,8 +7,10 @@
     <color name="teal_700">#FF018786</color>
     <color name="red">#FFFF0000</color>
     <color name="soft_red">#FFFF0010</color>
+    <color name="less_light_grey">#FFAAAAAA</color>
     <color name="light_grey">#FFCCCCCC</color>
     <color name="very_light_grey">#FFEEEEEE</color>
+    <color name="less_dark_grey">#FF606060</color>
     <color name="dark_grey">#FF404040</color>
     <color name="very_dark_grey">#FF202020</color>
     <color name="blue_grey">#FF8888AA</color>
@@ -24,7 +26,11 @@
     <color name="grey5">@color/very_dark_grey</color>
     <color name="grey6">@color/dark_grey</color>
     <color name="grey7">#80CCCCCC</color>
+    <color name="grey8">@color/light_grey</color>
+    <color name="grey9">#CC9E9E9E</color>
+    <color name="grey10">@color/less_light_grey</color>
     <color name="green1">#8099CC99</color>
-    <color name="green2">#FF00AA00</color>
+    <color name="green2">#FF009E00</color>
+    <color name="green3">#CC9EFF9E</color>
     <color name="yellow">#FFAAAA00</color>
 </resources>

@@ -76,11 +76,15 @@ class VideoDialog {
             }
             else {
                 title = title.replace(" - YouTube", "");
-                activity.currentPlaylist.addVideoTo(new YouTubeVideo(title, id), whereToAdd);
-                PlaylistAdapter a = (PlaylistAdapter) activity.playlistRecycler.getAdapter();
-                a.insertItem(whereToAdd);
-                dismiss();
-                activity.updateNoItemsView();
+                if (title.isEmpty() || title.equals("YouTube")) {
+                    activity.showMessage("Lütfen tekrar basın.");
+                } else {
+                    activity.currentPlaylist.addVideoTo(new YouTubeVideo(title, id), whereToAdd);
+                    PlaylistAdapter a = (PlaylistAdapter) activity.playlistRecycler.getAdapter();
+                    a.insertItem(whereToAdd);
+                    dismiss();
+                    activity.updateNoItemsView();
+                }
             }
         });
 
@@ -145,7 +149,7 @@ class VideoDialog {
         InputMethodManager imm = (InputMethodManager) activity.getSystemService(INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(editText.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
         String text = editText.getText().toString();
-        if (text.contains("/watch?") && text.indexOf("http") == 0) {
+        if ((text.contains("/watch?") && text.startsWith("http")) || text.contains("/youtu.be/")) {
             webView.loadUrl(text);
         }
         else if (text.length() == 11) {

@@ -5,16 +5,17 @@ import static android.content.pm.PackageManager.PERMISSION_DENIED;
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
+import android.app.Activity;
 import android.app.UiModeManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.PowerManager;
 import android.provider.Settings;
@@ -34,11 +35,12 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.Toolbar;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
-import androidx.activity.SystemBarStyle;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContract;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -63,13 +65,11 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTube
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class MainActivity extends AppCompatActivity {
@@ -81,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
     private ConstraintLayout videoController;
     private ImageView icon, options, settings, selectAllButton, removeButton, addToPlaylistButton,
             replayButton, playButton, forwardButton, videoReplay, videoPlay, videoForward,
-            openInYouTube, speed, fullscreen, speedBack, videoPrevious, videoNext, mergeButton, cancelSearchButton, findUpButton, findDownButton, searchButton;
+            setMusicStart, speed, fullscreen, speedBack, videoPrevious, videoNext, mergeButton, cancelSearchButton, findUpButton, findDownButton, searchButton;
     private TextView musicTitle, videoCurrent, videoLength, speedText, noPlaylistsText, noVideosText;
     private EditText searchEditText;
     private FloatingActionButton addButton;
@@ -95,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
     ItemTouchHelper listOfPlaylistsItemTouchHelper, playlistItemTouchHelper;
 
     ListOfPlaylists listOfPlaylists;
-    Playlist currentPlaylist, playingPlaylist;
+    Playlist currentPlaylist, playingPlaylist, sharedPlaylist;
     YouTubeVideo playingVideo;
 
     int currentPlaylistIndex = -1,
@@ -128,8 +128,8 @@ public class MainActivity extends AppCompatActivity {
     private final Context context = MainActivity.this;
 
     private Timer timer;
-    private Uri uri;
     private Handler handler;
+    private ActivityResultLauncher<Intent> activityResultLauncher;
 
     private PlayerConstants.PlaybackRate[] speeds = {
             PlayerConstants.PlaybackRate.RATE_0_25,
@@ -142,9 +142,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this,
-                darkMode ? SystemBarStyle.dark(getColor(R.color.dark_grey)) : SystemBarStyle.light(getColor(R.color.light_grey), getColor(R.color.dark_grey)),
-                darkMode ? SystemBarStyle.dark(Color.TRANSPARENT) : SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT));
+        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
         sp = getSharedPreferences("OnlinePlaylists", MODE_PRIVATE);
@@ -175,6 +173,8 @@ public class MainActivity extends AppCompatActivity {
         setOrientation(true);
         setFullscreen(false);
         setControllerVisibility(false);
+
+        activityResultLauncher = getActivityResultLauncher();
     }
 
     private void back() {
@@ -198,8 +198,26 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
         Intent intent = getIntent();
         if (Objects.equals(intent.getAction(), Intent.ACTION_VIEW) && intent.getData() != null) {
-            String[] permissions = {READ_EXTERNAL_STORAGE};
-            requestPermissions(permissions, 101);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                importPlaylist(getIntent().getData());
+            } else {
+                String[] permissions = {READ_EXTERNAL_STORAGE};
+                requestPermissions(permissions, 101);
+            }
+        }
+        if (Objects.equals(intent.getAction(), "themeChange")) {
+            if (sp.getBoolean("changing", false)) {
+                int ppi = intent.getIntExtra("ppi", -1);
+                int pvi = intent.getIntExtra("pvi", -1);
+                int cs = intent.getIntExtra("cs", 0);
+                int cpi = intent.getIntExtra("cpi", -1);
+                boolean play = intent.getBooleanExtra("play", true);
+                if (ppi != -1) openPlaylist(ppi);
+                if (pvi != -1) playVideo(pvi, cs, true, play);
+                setViewMode(false);
+                if (cpi != -1) openPlaylist(cpi);
+                spe.putBoolean("changing", false);
+            }
         }
         checkBatteryOptimizationSettings();
     }
@@ -221,8 +239,7 @@ public class MainActivity extends AppCompatActivity {
             if (grantResults[0] == PERMISSION_DENIED) {
                 showMessage(getString(R.string.grant_permission));
             } else {
-                uri = getIntent().getData();
-                importPlaylist();
+                importPlaylist(getIntent().getData());
             }
         }
     }
@@ -232,8 +249,22 @@ public class MainActivity extends AppCompatActivity {
         darkMode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ?
                 newConfig.isNightModeActive() :
                 (newConfig.uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        if (theme == 0) setAppTheme(0);
         setOrientation(newConfig.orientation == Configuration.ORIENTATION_PORTRAIT);
+        boolean darkModeSaved = sp.contains("darkMode");
+        boolean darkModeChanged = darkMode != sp.getBoolean("darkMode", true);
+        spe.putBoolean("darkMode", darkMode).commit();
+        if (theme == 0 && (!darkModeSaved || darkModeChanged)) setAppTheme(0);
         super.onConfigurationChanged(newConfig);
+    }
+
+    private ActivityResultLauncher<Intent> getActivityResultLauncher() {
+        return registerForActivityResult(new ActivityResultContracts.StartActivityForResult()
+                , (result) -> {
+                    Uri uri = result.getData().getData();
+                    OnlinePlaylistsUtils.writeFile(context, uri, sharedPlaylist.getJson());
+                    startActivity(Intent.createChooser(OnlinePlaylistsUtils.getShareIntent(uri), getString(R.string.share)));
+                });
     }
 
     @Override
@@ -350,7 +381,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onStateChange(@NonNull YouTubePlayer _youTubePlayer, @NonNull PlayerConstants.PlayerState state) {
                 if (state == PlayerConstants.PlayerState.ENDED) {
-                    if (playMode == 1) playVideo(playingVideoIndex, false, true);
+                    if (playMode == 1) playVideo(playingVideoIndex, false);
                     if (playMode == 2 && shuffle) playRandom();
                     if (playMode == 2 && !shuffle) playNext();
                 } else {
@@ -432,7 +463,7 @@ public class MainActivity extends AppCompatActivity {
             videoReplay.setClickable(areControlsVisible);
             videoPlay.setClickable(areControlsVisible);
             videoForward.setClickable(areControlsVisible);
-            openInYouTube.setClickable(areControlsVisible);
+            setMusicStart.setClickable(areControlsVisible);
             fullscreen.setClickable(areControlsVisible);
             speed.setClickable(areControlsVisible);
             speedBack.setClickable(areControlsVisible);
@@ -465,8 +496,8 @@ public class MainActivity extends AppCompatActivity {
                 youTubePlayer.seekTo(seekBar.getProgress());
             }
         });
-        openInYouTube = mainView.findViewById(R.id.openInYoutube);
-        openInYouTube.setOnClickListener(v -> {
+        setMusicStart = mainView.findViewById(R.id.openInYoutube);
+        setMusicStart.setOnClickListener(v -> {
             playingVideo.musicStartSeconds = currentSecond;
             showMessage(getString(R.string.music_start_point_set));
         });
@@ -621,17 +652,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void removePlaylist(int index) {
-        AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this, R.style.Theme_OnlinePlaylistsDialog);
-        b.setTitle(listOfPlaylists.getPlaylistAt(index).title);
-        b.setMessage(getString(R.string.delete_playlist_alert));
-        b.setPositiveButton(getString(R.string.dialog_button_delete) , ((dialog, which) -> {
-            listOfPlaylists.removePlaylist(index);
-            listOfPlaylistsAdapter.removeItem(index);
-            updateNoItemsView();
-        }));
-        b.setNegativeButton(getString(R.string.dialog_button_no), ((dialog, which) -> dialog.cancel()));
-        b.setOnCancelListener(dialog -> listOfPlaylistsAdapter.notifyItemChanged(index));
-        b.create().show();
+        OnlinePlaylistsUtils.showMessageDialog(
+                context,
+                listOfPlaylists.getPlaylistAt(index).title,
+                R.string.delete_playlist_alert,
+                R.string.dialog_button_delete,
+                (dialog, which) -> {
+                    listOfPlaylists.removePlaylist(index);
+                    listOfPlaylistsAdapter.removeItem(index);
+                    updateNoItemsView();
+                },
+                R.string.dialog_button_no,
+                dialog -> listOfPlaylistsAdapter.notifyItemChanged(index)
+                );
     }
 
     @NonNull PopupMenu getVideoPopupMenu(View anchor, int index) {
@@ -666,17 +699,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void removeVideo(int index) {
-        AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this, R.style.Theme_OnlinePlaylistsDialog);
-        b.setTitle(currentPlaylist.getVideoAt(index).title);
-        b.setMessage(getString(R.string.delete_video_alert));
-        b.setPositiveButton(getString(R.string.dialog_button_delete), ((dialog, which) -> {
-            currentPlaylist.removeVideo(index);
-            playlistAdapter.removeItem(index);
-            updateNoItemsView();
-        }));
-        b.setNegativeButton(getString(R.string.dialog_button_no), ((dialog, which) -> dialog.cancel()));
-        b.setOnCancelListener(dialog -> playlistAdapter.notifyItemChanged(index));
-        b.create().show();
+        OnlinePlaylistsUtils.showMessageDialog(
+                context,
+                currentPlaylist.getVideoAt(index).title,
+                R.string.delete_video_alert,
+                R.string.dialog_button_delete,
+                (dialog, which) -> {
+                    currentPlaylist.removeVideo(index);
+                    playlistAdapter.removeItem(index);
+                    updateNoItemsView();
+                },
+                R.string.dialog_button_no,
+                dialog -> playlistAdapter.notifyItemChanged(index)
+                );
     }
 
     private @NonNull PopupMenu getSettingsPopupMenu() {
@@ -761,32 +796,20 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (itemIndex == R.id.lightTheme) {
-                theme = 1;
                 item.setChecked(true);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-                    ((UiModeManager) getSystemService(UI_MODE_SERVICE)).setApplicationNightMode(UiModeManager.MODE_NIGHT_NO);
-                else AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-                startActivity(new Intent(this, MainActivity.class));
+                setAppTheme(1);
                 return true;
             }
 
             if (itemIndex == R.id.darkTheme) {
-                theme = 2;
                 item.setChecked(true);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-                    ((UiModeManager) getSystemService(UI_MODE_SERVICE)).setApplicationNightMode(UiModeManager.MODE_NIGHT_YES);
-                else AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-                startActivity(new Intent(this, MainActivity.class));
+                setAppTheme(2);
                 return true;
             }
 
             if (itemIndex == R.id.autoTheme) {
-                theme = 0;
                 item.setChecked(true);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-                    ((UiModeManager) getSystemService(UI_MODE_SERVICE)).setApplicationNightMode(UiModeManager.MODE_NIGHT_AUTO);
-                else AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-                startActivity(new Intent(this, MainActivity.class));
+                setAppTheme(0);
                 return true;
             }
 
@@ -810,7 +833,7 @@ public class MainActivity extends AppCompatActivity {
         spe.putString("playlists", listOfPlaylists.getJson()).apply();
     }
 
-    private void importPlaylist() {
+    private void importPlaylist(Uri uri) {
         try {
             listOfPlaylists.addPlaylist(new Playlist().fromJson(OnlinePlaylistsUtils.readFile(this, uri)));
             showMessage(getString(R.string.import_success));
@@ -824,21 +847,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void sharePlaylist(Playlist playlist) {
-        String folderPath = Objects.requireNonNull(getExternalFilesDir(null)).getAbsolutePath();
-        folderPath = folderPath.concat("/Exports");
-        File folder = new File(folderPath);
-        if (!folder.exists()) folder.mkdirs();
-
-        String content = playlist.getJson();
-        String fileName = playlist.title.replace("/", "_");
-        String filePath = folderPath.concat("/").concat(fileName).concat(".json");
-        OnlinePlaylistsUtils.writeFile(filePath, content);
-
-        Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_SEND);
-        intent.setType("application/json");
-        intent.putExtra(Intent.EXTRA_STREAM, Uri.parse(filePath));
-        startActivity(Intent.createChooser(intent, getString(R.string.share)));
+        sharedPlaylist = playlist;
+        String fileName = playlist.title.replace("/", "_".concat(".json"));
+        activityResultLauncher.launch(OnlinePlaylistsUtils.getCreateIntent(fileName));
     }
 
     void openPlaylist(int index) {
@@ -852,13 +863,15 @@ public class MainActivity extends AppCompatActivity {
         playlistRecycler.scrollToPosition(scroll);
     }
 
-    void playVideo(int index, boolean switchPlaylist, boolean autoPlay) {
-        playVideo(index, musicMode ? currentPlaylist.getVideoAt(index).musicStartSeconds : 0, switchPlaylist, autoPlay);
+    void playVideo(int index, boolean switchPlaylist) {
+        playVideo(index, musicMode ? currentPlaylist.getVideoAt(index).musicStartSeconds : 0, switchPlaylist, true);
     }
 
     private void playVideo(int index, int startSecond, boolean switchPlaylist, boolean autoPlay) {
         if (youTubePlayer == null) {
-            showMessage(getString(R.string.player_not_ready));
+            showMessage(OnlinePlaylistsUtils.isConnected(context) ?
+                    getString(R.string.player_not_ready) :
+                    "Lütfen internet bağlantınızı kontrol edin.");
         } else {
             if (!switchPlaylist && playingPlaylistIndex == currentPlaylistIndex) switchPlaylist = true;
 
@@ -905,18 +918,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void playPrevious() {
         int index = playingVideoIndex == 0 ? currentPlaylist.getLength()-1 : playingVideoIndex - 1;
-        playVideo(index, false, true);
+        playVideo(index, false);
     }
 
     private void playNext() {
         int index = playingVideoIndex == currentPlaylist.getLength()-1 ? 0 : playingVideoIndex + 1;
-        playVideo(index, false, true);
+        playVideo(index, false);
     }
 
     private void playRandom() {
         if (playlistIndexes.isEmpty()) for (int i = 0; i < currentPlaylist.getLength(); i++) playlistIndexes.add(i);
         int index = playlistIndexes.get(new Random().nextInt(playlistIndexes.size()));
-        playVideo(index, false, true);
+        playVideo(index, false);
     }
 
     void closePlayer() {
@@ -955,6 +968,7 @@ public class MainActivity extends AppCompatActivity {
             if (listOfPlaylistsAdapter != null) {
                 listOfPlaylistsAdapter.notifyDataSetChanged();
             }
+            currentPlaylistIndex = -1;
         }
         updateToolbar();
         updateNoItemsView();
@@ -1028,44 +1042,51 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void removeItems() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_OnlinePlaylistsDialog);
-        builder.setTitle(R.string.multi_remove_title);
-        builder.setMessage(String.format(getString(R.string.multi_remove_prompt), selectedItems.size()));
-        builder.setPositiveButton(R.string.dialog_button_delete, (dialog, which) -> {
-            if (viewMode) {
-                currentPlaylist.removeVideos(selectedItems);
-                if (selectedItems.contains(playingVideoIndex)) closePlayer();
-            }
-            else {
-                listOfPlaylists.removePlaylists(selectedItems);
-                if (selectedItems.contains(playingPlaylistIndex)) closePlayer();
-            }
-            showMessage(getString(R.string.removed));
-            selectedItems.clear();
-            setSelectionMode(false);
-            updateNoItemsView();
-        });
-        builder.setNegativeButton(R.string.dialog_button_no, null);
-        builder.create().show();
+        if (selectedItems.size() == 1) {
+            int index = selectedItems.get(0);
+            if (viewMode) removeVideo(index); else removePlaylist(index);
+        } else OnlinePlaylistsUtils.showMessageDialog(context,
+                R.string.multi_remove_title,
+                String.format(getString(R.string.multi_remove_prompt), selectedItems.size()),
+                R.string.dialog_button_delete,
+                (dialog, which) -> {
+                    if (viewMode) {
+                        currentPlaylist.removeVideos(selectedItems);
+                        if (selectedItems.contains(playingVideoIndex)) closePlayer();
+                    }
+                    else {
+                        listOfPlaylists.removePlaylists(selectedItems);
+                        if (selectedItems.contains(playingPlaylistIndex)) closePlayer();
+                    }
+                    showMessage(getString(R.string.removed));
+                    selectedItems.clear();
+                    setSelectionMode(false);
+                    updateNoItemsView();
+                },
+                R.string.dialog_button_no);
     }
 
     private void addItemsToPlaylist() {
-        new ManagePlaylistsDialog(this, selectedItems).show();
+        (selectedItems.size() == 1 ?
+                new ManagePlaylistsDialog(this, selectedItems.get(0)) :
+                new ManagePlaylistsDialog(this, selectedItems))
+                .show();
     }
 
     private void mergeItems() {
         if (selectedItems.size() > 1) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.Theme_OnlinePlaylistsDialog);
-            builder.setTitle(R.string.merge_title);
-            builder.setMessage(String.format(getString(R.string.merge_message), selectedItems.size()));
-            builder.setPositiveButton(R.string.dialog_button_merge, (dialog, which) -> {
-                String s = listOfPlaylists.mergePlaylists(selectedItems);
-                selectedItems.clear();
-                setSelectionMode(false);
-                showMessage(String.format(getString(R.string.merge_success), s));
-            });
-            builder.setNegativeButton(R.string.dialog_button_cancel, null);
-            builder.create().show();
+            OnlinePlaylistsUtils.showMessageDialog(
+                    context,
+                    R.string.merge_title,
+                    String.format(getString(R.string.merge_message), selectedItems.size()),
+                    R.string.dialog_button_merge,
+                    (dialog, which) -> {
+                        String s = listOfPlaylists.mergePlaylists(selectedItems);
+                        selectedItems.clear();
+                        setSelectionMode(false);
+                        showMessage(String.format(getString(R.string.merge_success), s));
+                    },
+                    R.string.dialog_button_cancel);
         } else {
             showMessage(getString(R.string.choose_more_than_one));
         }
@@ -1166,4 +1187,20 @@ public class MainActivity extends AppCompatActivity {
         if (!isPortrait) OnlinePlaylistsUtils.setDimensions(context, list, musicMode || !showController ? MATCH_PARENT : 300, MATCH_PARENT, 0);
     }
 
+    private void setAppTheme(int _theme) {
+        theme = _theme;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            ((UiModeManager) getSystemService(UI_MODE_SERVICE)).setApplicationNightMode(theme);
+        else AppCompatDelegate.setDefaultNightMode(theme == 0 ? AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM : theme);
+        Intent i = new Intent(this, MainActivity.class);
+        spe.putBoolean("changing", true);
+        i.setAction("themeChange");
+        i.putExtra("ppi", playingPlaylistIndex);
+        i.putExtra("pvi", playingVideoIndex);
+        i.putExtra("cpi", currentPlaylistIndex);
+        i.putExtra("cs", currentSecond);
+        i.putExtra("play", isPlaying);
+        startActivity(i);
+        finish();
+    }
 }

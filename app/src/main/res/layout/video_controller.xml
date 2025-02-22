@@ -72,8 +72,7 @@
             android:id="@+id/bottomMainControls"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:visibility="visible">
+            android:orientation="vertical">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -94,7 +93,8 @@
                     android:layout_weight="1"
                     android:gravity="start"
                     android:padding="8dp"
-                    android:text="0:00" />
+                    android:text="0:00"
+                    android:textColor="@color/white" />
 
                 <ImageView
                     android:id="@+id/openInYoutube"
@@ -124,7 +124,8 @@
                     android:layout_weight="1"
                     android:gravity="end"
                     android:padding="8dp"
-                    android:text="0:00" />
+                    android:text="0:00"
+                    android:textColor="@color/white" />
 
             </LinearLayout>
 
@@ -158,20 +159,23 @@
                     android:layout_width="60dp"
                     android:layout_height="match_parent"
                     android:padding="3dp"
-                    app:srcCompat="@drawable/baseline_arrow_back_24" />
+                    app:srcCompat="@drawable/baseline_arrow_back_24"
+                    app:tint="@color/white" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="start"
                     android:padding="8dp"
-                    android:text="@string/speed" />
+                    android:text="@string/speed"
+                    android:textColor="@color/white" />
 
                 <TextView
                     android:id="@+id/speedText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="1.0x"
+                    android:textColor="@color/white"
                     android:textSize="16sp"
                     android:textStyle="bold" />
 

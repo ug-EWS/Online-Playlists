@@ -1,9 +1,11 @@
 package com.example.onlineplaylists;
 
 import android.content.DialogInterface;
+import android.graphics.Color;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 
 import androidx.appcompat.app.AlertDialog;
@@ -25,16 +27,7 @@ class PlaylistDialog {
         dialogView = activity.getLayoutInflater().inflate(R.layout.add_playlist, null);
         editText = dialogView.findViewById(R.id.editText);
         iconSelector = dialogView.findViewById(R.id.iconSelector);
-        View.OnClickListener onClickListener = view -> {
-            selectedIcon = iconSelector.indexOfChild(view);
-            for (int i = 0; i < 5; i++) {
-                iconSelector.getChildAt(i).setBackgroundResource(
-                        i == selectedIcon
-                                ? R.drawable.icon_selector_1
-                                : R.drawable.icon_selector
-                );
-            }
-        };
+        View.OnClickListener onClickListener = view -> selectIcon(iconSelector.indexOfChild(view));
         for (int i = 0; i < 5; i++) {
             iconSelector.getChildAt(i).setOnClickListener(onClickListener);
         }
@@ -50,7 +43,8 @@ class PlaylistDialog {
         boolean _newPlaylist = _forPlaylist == -1;
         builder.setTitle(activity.getString(_newPlaylist ? R.string.add_playlist : R.string.edit_playlist));
         if (_newPlaylist) {
-            iconSelector.getChildAt(0).setBackgroundResource(R.drawable.icon_selector_1);
+            selectIcon(0);
+            editText.setText("");
             builder.setPositiveButton(activity.getString(R.string.dialog_button_add), (dialog, which) -> {
                 String text = editText.getText().toString();
                 if (text.isEmpty()) text = editText.getHint().toString();
@@ -61,9 +55,7 @@ class PlaylistDialog {
         } else {
             toEdit = activity.listOfPlaylists.getPlaylistAt(_forPlaylist);
             editText.setText(toEdit.title);
-            selectedIcon = toEdit.icon;
-            if (selectedIcon > 4 || selectedIcon < 0) selectedIcon = 0;
-            iconSelector.getChildAt(selectedIcon).setBackgroundResource(R.drawable.icon_selector_1);
+            selectIcon(toEdit.icon);
             builder.setPositiveButton(activity.getString(R.string.dialog_button_apply), (dialog, which) -> {
                 String text = editText.getText().toString();
                 toEdit.title = text;
@@ -74,6 +66,16 @@ class PlaylistDialog {
         }
 
         dialog = builder.create();
+    }
+
+    private void selectIcon(int index) {
+        if (index > 4 || index < 0) index = 0;
+        selectedIcon = index;
+        for (int i = 0; i < 5; i++) {
+            ImageView icon = (ImageView) iconSelector.getChildAt(i);
+            icon.setBackgroundResource(i == selectedIcon ? R.drawable.icon_selector_1 : R.drawable.icon_selector);
+            icon.setColorFilter(i == selectedIcon ? Color.WHITE : activity.getColor(R.color.grey6));
+        }
     }
 
     public void show() {
