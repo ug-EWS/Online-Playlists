@@ -14,7 +14,6 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 
 import androidx.appcompat.app.AlertDialog;
@@ -61,7 +60,8 @@ class VideoDialog {
             public void onReceivedTitle(WebView v, String t) {
                 super.onReceivedTitle(v, t);
                 url = webView.getUrl();
-                addButton.setVisibility(url.contains("watch") ? View.VISIBLE : View.GONE);
+                if (url == null) url = "";
+                addButton.setVisibility(url.contains("/watch?") ? View.VISIBLE : View.GONE);
                 title = t;
                 backButton.setVisibility(webView.canGoBack() ? View.VISIBLE : View.GONE);
                 forwardButton.setVisibility(webView.canGoForward() ? View.VISIBLE : View.GONE);
@@ -80,10 +80,10 @@ class VideoDialog {
                     activity.showMessage("Lütfen tekrar basın.");
                 } else {
                     activity.currentPlaylist.addVideoTo(new YouTubeVideo(title, id), whereToAdd);
-                    PlaylistAdapter a = (PlaylistAdapter) activity.playlistRecycler.getAdapter();
-                    a.insertItem(whereToAdd);
+                    activity.playlistAdapter.insertItem(whereToAdd);
                     dismiss();
                     activity.updateNoItemsView();
+                    activity.playlistRecycler.scrollToPosition(whereToAdd);
                 }
             }
         });
@@ -149,15 +149,12 @@ class VideoDialog {
         InputMethodManager imm = (InputMethodManager) activity.getSystemService(INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(editText.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
         String text = editText.getText().toString();
-        if ((text.contains("/watch?") && text.startsWith("http")) || text.contains("/youtu.be/")) {
-            webView.loadUrl(text);
-        }
-        else if (text.length() == 11) {
-            webView.loadUrl("https://m.youtube.com/watch?v=".concat(text));
-        }
-        else {
-            webView.loadUrl("https://m.youtube.com/results?search_query=".concat(text));
-        }
+        text = text.startsWith("http") ?
+                ((text.contains("/watch?") || text.contains("youtu.be")) ? text : "") :
+                text.length() == 11 ?
+                        "https://m.youtube.com/watch?v=".concat(text) :
+                        "https://m.youtube.com/results?search_query=".concat(text);
+        if (!text.isEmpty()) webView.loadUrl(text);
         webView.setVisibility(View.VISIBLE);
         refreshButton.setVisibility(View.VISIBLE);
     }

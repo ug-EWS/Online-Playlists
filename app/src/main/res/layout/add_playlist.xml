@@ -102,4 +102,32 @@
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
+    <CheckBox
+        android:id="@+id/checkBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="YouTube oynatma listesi" />
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="8dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:cardPreventCornerOverlap="true">
+
+        <EditText
+            android:id="@+id/editText2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/grey2"
+            android:ems="10"
+            android:hint="ID ya da URL girin"
+            android:inputType="text"
+            android:padding="16dp"
+            android:textColor="@color/grey1"
+            android:textColorHint="@color/blue_grey"
+            android:visibility="gone" />
+    </androidx.cardview.widget.CardView>
+
 </LinearLayout>

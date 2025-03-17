@@ -1,7 +1,6 @@
 package com.example.onlineplaylists;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
@@ -43,7 +42,7 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         View itemView = holder.itemView;
         int pos = holder.getAdapterPosition();
-        boolean playing = activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.playingVideoIndex == pos;
+        boolean playing = activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.youTube.playingVideoIndex == pos;
 
         LinearLayout layout = itemView.findViewById(R.id.layout);
         ImageView thumbnail = itemView.findViewById(R.id.videoThumbnail);
@@ -56,7 +55,7 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
         setItemOnClickListener(layout, pos);
         setItemOnLongClickListener(layout, pos);
 
-        layout.setBackgroundResource(activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.playingVideoIndex == pos
+        layout.setBackgroundResource(activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.youTube.playingVideoIndex == pos
                 ? R.drawable.list_item_playing
                 : R.drawable.list_item);
 
@@ -89,9 +88,9 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
     }
 
     public void insertItem(int index) {
-        if (activity.playingVideoIndex != -1 && index <= activity.playingVideoIndex && activity.currentPlaylistIndex == activity.playingPlaylistIndex) {
-            activity.playingVideoIndex++;
-            activity.playingVideo = activity.currentPlaylist.getVideoAt(activity.playingVideoIndex);
+        if (activity.youTube.playingVideoIndex != -1 && index <= activity.youTube.playingVideoIndex && activity.currentPlaylistIndex == activity.playingPlaylistIndex) {
+            activity.youTube.playingVideoIndex++;
+            activity.playingVideo = activity.currentPlaylist.getVideoAt(activity.youTube.playingVideoIndex);
         }
 
         this.notifyItemInserted(index);
@@ -100,10 +99,10 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
 
     public void removeItem(int index) {
         if (activity.playingVideo != null && activity.currentPlaylistIndex == activity.playingPlaylistIndex) {
-            if (index < activity.playingVideoIndex) {
-                activity.playingVideoIndex = activity.currentPlaylist.getIndexOf(activity.playingVideo);
+            if (index < activity.youTube.playingVideoIndex) {
+                activity.youTube.playingVideoIndex = activity.currentPlaylist.getIndexOf(activity.playingVideo);
             }
-            if (index == activity.playingVideoIndex) {
+            if (index == activity.youTube.playingVideoIndex) {
                 activity.closePlayer();
             }
         }
@@ -126,9 +125,9 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
                 }
             }
             else if (!activity.listSortMode) {
-                if ((activity.currentPlaylistIndex == activity.playingPlaylistIndex && position == activity.playingVideoIndex))
-                    if (activity.isPlaying) activity.youTubePlayer.pause();
-                    else activity.youTubePlayer.play();
+                if ((activity.currentPlaylistIndex == activity.playingPlaylistIndex && position == activity.youTube.playingVideoIndex))
+                    if (activity.youTube.isPlaying) activity.youTube.pause();
+                    else activity.youTube.play();
                 else activity.playVideo(position, true);
             }
             if (activity.searchMode) activity.setSearchMode(false);
@@ -164,7 +163,7 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
         int positionMax = Math.max(fromPosition, toPosition);
 
         if (activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.playingVideo != null)
-            activity.playingVideoIndex = activity.currentPlaylist.getIndexOf(activity.playingVideo);
+            activity.youTube.playingVideoIndex = activity.currentPlaylist.getIndexOf(activity.playingVideo);
 
         notifyItemMoved(fromPosition, toPosition);
         notifyItemRangeChanged(positionMin, positionMax - positionMin + 1);

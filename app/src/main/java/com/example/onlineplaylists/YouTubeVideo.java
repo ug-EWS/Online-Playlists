@@ -21,11 +21,10 @@ public class YouTubeVideo {
 
     public YouTubeVideo fromJson(String _json) {
         HashMap<String, Object> map = Json.toMap(_json);
-        title = map.get("title").toString();
-        id = map.get("id").toString();
+        title = (String) map.get("title");
+        id = (String) map.get("id");
         if (map.containsKey("start")) {
-            double start = (Double) map.get("start");
-            musicStartSeconds = (int) start;
+            musicStartSeconds = (int)(double)(Double) map.get("start");
         }
         return this;
     }

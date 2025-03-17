@@ -16,6 +16,7 @@ import android.media.session.PlaybackState;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -24,6 +25,7 @@ import com.bumptech.glide.Glide;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
 
 import java.util.ArrayList;
@@ -41,6 +43,7 @@ public class PlaybackService extends Service {
     private MediaSession mediaSession;
     private YouTubePlayerView youTubePlayerView;
     private YouTubePlayer youTubePlayer;
+    private AbstractYouTubePlayerListener listener;
     private Handler handler;
     private MediaMetadata.Builder mediaMetadata;
     private PlaybackState.Builder playbackState;
@@ -66,7 +69,6 @@ public class PlaybackService extends Service {
     private final String ACTION_FORWARD = "com.opl.ACTION_FORWARD";
     private final String ACTION_PREV = "com.opl.ACTION_PREV";
     private final String ACTION_NEXT = "com.opl.ACTION_NEXT";
-    private final String ACTION_CONTINUE = "com.opl.ACTION_CONTINUE";
 
     private final int SERVICE_NOTIFICATION = 101;
     private final int TIMEOUT_NOTIFICATION = 102;
@@ -140,19 +142,21 @@ public class PlaybackService extends Service {
         playlistIndexes = new ArrayList<>();
 
         youTubePlayerView = new YouTubePlayerView(this);
-        youTubePlayerView.addYouTubePlayerListener(new AbstractYouTubePlayerListener() {
+        youTubePlayerView.setEnableAutomaticInitialization(false);
+        listener = new AbstractYouTubePlayerListener() {
             @Override
             public void onReady(@NonNull YouTubePlayer _youTubePlayer) {
                 isReady = true;
                 youTubePlayer = _youTubePlayer;
-                if (isStarting) initializePlayer();
+                if (isStarting && !playlist.remote) changeVideo(false);
+                if (playlist.remote) youTubePlayer.setShuffle(shuffle);
                 super.onReady(youTubePlayer);
             }
 
             @Override
             public void onStateChange(@NonNull YouTubePlayer youTubePlayer, @NonNull PlayerConstants.PlayerState state) {
                 if (state == PlayerConstants.PlayerState.ENDED) {
-                    playOtherVideo();
+                    if (!playlist.remote) playOtherVideo();
                 } else {
                     boolean isPlayingBeforeValue = isPlaying;
                     isPlaying = state == PlayerConstants.PlayerState.PLAYING;
@@ -184,7 +188,7 @@ public class PlaybackService extends Service {
                 mediaSession.setMetadata(mediaMetadata.build());
                 super.onVideoDuration(youTubePlayer, duration);
             }
-        });
+        };
         handler = new Handler(getMainLooper());
     }
 
@@ -232,7 +236,7 @@ public class PlaybackService extends Service {
                         timerMs = sp.getLong("timerMs", 0);
                         spe.putBoolean("serviceRunning", true).commit();
                         isStarting = true;
-                        if (isReady) initializePlayer();
+                        if (isReady && !playlist.remote) changeVideo(false); else initializePlayer();
                         setTimer();
                         break;
                     case ACTION_PLAY:
@@ -270,12 +274,14 @@ public class PlaybackService extends Service {
 
     private Notification getNotification() {
         Notification notification;
-        title = playlist.getVideoAt(currentVideoIndex).title;
+        title = playlist.remote ? playlist.title : playlist.getVideoAt(currentVideoIndex).title;
         Bitmap bitmap = null;
         try {
-            bitmap = Glide.with(this).asBitmap().load(playlist.getVideoAt(currentVideoIndex).getThumbnailUrl()).submit().get();
-            mediaMetadata.putBitmap(MediaMetadata.METADATA_KEY_ART, bitmap);
-            mediaSession.setMetadata(mediaMetadata.build());
+            if (!playlist.remote) {
+                bitmap = Glide.with(this).asBitmap().load(playlist.getVideoAt(currentVideoIndex).getThumbnailUrl()).submit().get();
+                mediaMetadata.putBitmap(MediaMetadata.METADATA_KEY_ART, bitmap);
+                mediaSession.setMetadata(mediaMetadata.build());
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -284,7 +290,7 @@ public class PlaybackService extends Service {
                     .setSmallIcon(R.drawable.baseline_smart_display_24)
                     .setTicker(getString(R.string.app_name))  // the status text
                     .setContentTitle(title)  // the label of the entry
-                    .setContentText(playlist.title)
+                    .setContentText(playlist.remote ? "" : playlist.title)
                     .setShowWhen(false)
                     .setContentIntent(getPendingIntent())
                     .setDeleteIntent(getIntentFor(ACTION_CLOSE))
@@ -346,7 +352,10 @@ public class PlaybackService extends Service {
     }
 
     private void initializePlayer() {
-        changeVideo(false);
+        if (playlist.remote) {
+            IFramePlayerOptions iFramePlayerOptions = new IFramePlayerOptions.Builder().autoplay(1).listType("playlist").list(playlist.remoteId).build();
+            youTubePlayerView.initialize(listener, iFramePlayerOptions);
+        } else youTubePlayerView.initialize(listener);
     }
 
     private void play() {
@@ -359,13 +368,19 @@ public class PlaybackService extends Service {
     }
 
     private void playPrevious() {
-        currentVideoIndex = currentVideoIndex == 0 ? playlist.getLength() - 1 : currentVideoIndex - 1;
-        changeVideo(true);
+        if (playlist.remote) youTubePlayer.previousVideo();
+        else {
+            currentVideoIndex = currentVideoIndex == 0 ? playlist.getLength() - 1 : currentVideoIndex - 1;
+            changeVideo(true);
+        }
     }
 
     private void playNext() {
-        currentVideoIndex = currentVideoIndex == playlist.getLength() - 1 ? 0 : currentVideoIndex + 1;
-        changeVideo(true);
+        if (playlist.remote) youTubePlayer.nextVideo();
+        else {
+            currentVideoIndex = currentVideoIndex == playlist.getLength() - 1 ? 0 : currentVideoIndex + 1;
+            changeVideo(true);
+        }
     }
 
     private void playRandom() {

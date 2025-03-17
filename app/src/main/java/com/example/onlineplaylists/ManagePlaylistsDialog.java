@@ -1,6 +1,7 @@
 package com.example.onlineplaylists;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 
@@ -32,7 +33,7 @@ class ManagePlaylistsDialog {
         length = listOfPlaylists.getLength();
         for (int i = 0; i < length; i++) {
             Playlist playlist = listOfPlaylists.getPlaylistAt(i);
-            if (!playlist.contains(video)) {
+            if (!playlist.contains(video) && !playlist.remote) {
                 items.add(playlist.title);
                 originalIndexes.add(i);
             }
@@ -54,6 +55,7 @@ class ManagePlaylistsDialog {
         builder.setNeutralButton(R.string.move, (dialog1, which) -> {
             copyVideo();
             currentPlaylist.removeVideo(_forVideo);
+            activity.playlistAdapter.removeItem(_forVideo);
             activity.showMessage(R.string.moved);
         });
         dialog = builder.create();
@@ -68,8 +70,8 @@ class ManagePlaylistsDialog {
         length = listOfPlaylists.getLength();
 
         for (int i = 0; i < length; i++) {
-            if (activity.currentPlaylistIndex != i) {
-                Playlist playlist = listOfPlaylists.getPlaylistAt(i);
+            Playlist playlist = listOfPlaylists.getPlaylistAt(i);
+            if (activity.currentPlaylistIndex != i && !playlist.remote) {
                 items.add(playlist.title);
                 originalIndexes.add(i);
             }

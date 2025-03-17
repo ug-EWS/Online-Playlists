@@ -54,6 +54,11 @@ public class ListOfPlaylists {
         return playlists.size();
     }
 
+    public boolean hasRemote(ArrayList<Integer> indexes) {
+        for (Integer i : indexes) if (playlists.get(i).remote) return true;
+        return false;
+    }
+
     public void removePlaylist(int index) {
         playlists.remove(index);
     }

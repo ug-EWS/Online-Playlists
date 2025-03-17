@@ -12,25 +12,33 @@ public class Playlist {
     public String title;
     public int icon;
     private ArrayList<YouTubeVideo> videos;
+    public boolean remote;
+    public String remoteId;
 
     Playlist() {
         title = "";
         icon = 0;
         videos = new ArrayList<>();
+        remote = false;
+        remoteId = "";
     }
 
-    Playlist(String _title, int _icon) {
+    Playlist(String _title, int _icon, String _remoteId) {
         title = _title;
         icon = _icon;
         videos = new ArrayList<>();
+        remote = _remoteId != null;
+        remoteId = _remoteId;
     }
 
     public Playlist fromJson (String _json) {
         videos = new ArrayList<>();
         HashMap<String, Object> map = Json.toMap(_json);
-        ArrayList<String> sourceList = Json.toList(map.get("videos").toString());
-        title = map.get("title").toString();
-        icon = map.containsKey("icon") ? Integer.parseInt(map.get("icon").toString()) : R.drawable.baseline_featured_play_list_24;
+        ArrayList<String> sourceList = Json.toList((String) map.get("videos"));
+        title = (String) map.get("title");
+        icon = map.containsKey("icon") ? Integer.parseInt((String) map.get("icon")) : 0;
+        remote = (boolean) map.getOrDefault("remote", false);
+        remoteId = (String) map.getOrDefault("remoteId", "");
         YouTubeVideo ytv;
 
         for (String i: sourceList) {
@@ -119,10 +127,24 @@ public class Playlist {
         map.put("title", title);
         map.put("icon", String.valueOf(icon));
         map.put("videos", Json.valueOf(list));
+        map.put("remote", remote);
+        map.put("remoteId", remoteId);
         return Json.valueOf(map);
     }
 
     public boolean isEmpty() {
         return videos.isEmpty();
+    }
+
+    public static String getIdFrom(String text) {
+        if (text.contains("list=")) {
+            text = text.substring(text.indexOf("list=") + 5);
+            if (text.contains("&")) text = text.substring(0, text.indexOf("&"));
+        }
+        return text;
+    }
+
+    public String getPlaylistUrl() {
+        return "https://www.youtube.com/watch?list=".concat(remoteId);
     }
 }

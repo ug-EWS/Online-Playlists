@@ -45,6 +45,7 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         View itemView = holder.itemView;
         int pos = holder.getAdapterPosition();
+        Playlist playlist = activity.listOfPlaylists.getPlaylistAt(pos);
 
         LinearLayout layout = itemView.findViewById(R.id.layout);
         ImageView icon = itemView.findViewById(R.id.playlistIcon);
@@ -60,10 +61,10 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                 activity.playingPlaylistIndex == pos ? R.drawable.list_item_playing
                         : R.drawable.list_item);
 
-        int iconIndex = activity.listOfPlaylists.getPlaylistAt(pos).icon;
+        int iconIndex = playlist.icon;
         if (iconIndex > 4 || iconIndex < 0) iconIndex = 0;
         icon.setImageResource(icons[iconIndex]);
-        String titleStr = activity.listOfPlaylists.getPlaylistAt(pos).title;
+        String titleStr = playlist.title;
         if (activity.searchMode && activity.foundItemIndex == pos) {
             SpannableString spannableString = new SpannableString(titleStr);
             spannableString.setSpan(new ForegroundColorSpan(activity.getColor(R.color.yellow)),
@@ -72,7 +73,7 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
             title.setText(spannableString, TextView.BufferType.SPANNABLE);
         } else title.setText(titleStr);
-        size.setText(String.valueOf(activity.listOfPlaylists.getPlaylistAt(pos).getLength()).concat(" video"));
+        size.setText(playlist.remote ? "YouTube oynatma listesi" : String.valueOf(playlist.getLength()).concat(" video"));
         title.setTextColor(activity.getColor(activity.playingPlaylistIndex == pos ? R.color.green2 : R.color.grey1));
 
         checkBox.setVisibility(activity.selectionMode ? View.VISIBLE : View.GONE);
@@ -126,7 +127,8 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     activity.updateToolbar();
                 }
             }
-            else activity.openPlaylist(position);
+            else if (!activity.listSortMode)
+                activity.openPlaylist(position);
             if (activity.searchMode) activity.setSearchMode(false);
         });
     }

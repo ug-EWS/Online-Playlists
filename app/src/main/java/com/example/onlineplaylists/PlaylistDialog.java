@@ -4,19 +4,22 @@ import android.content.DialogInterface;
 import android.graphics.Color;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.cardview.widget.CardView;
 
 class PlaylistDialog {
     MainActivity activity;
     AlertDialog.Builder builder;
     AlertDialog dialog;
     View dialogView;
-    EditText editText;
+    EditText editText, editText2;
     LinearLayout iconSelector;
+    CheckBox checkBox;
     Playlist toEdit;
     int whereToAdd;
     int selectedIcon;
@@ -26,11 +29,15 @@ class PlaylistDialog {
         builder = new AlertDialog.Builder(activity, R.style.Theme_OnlinePlaylistsDialog);
         dialogView = activity.getLayoutInflater().inflate(R.layout.add_playlist, null);
         editText = dialogView.findViewById(R.id.editText);
+        editText2 = dialogView.findViewById(R.id.editText2);
         iconSelector = dialogView.findViewById(R.id.iconSelector);
         View.OnClickListener onClickListener = view -> selectIcon(iconSelector.indexOfChild(view));
         for (int i = 0; i < 5; i++) {
             iconSelector.getChildAt(i).setOnClickListener(onClickListener);
         }
+        checkBox = dialogView.findViewById(R.id.checkBox);
+        checkBox.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> editText2.setVisibility(isChecked ? View.VISIBLE : View.GONE));
         builder.setNegativeButton(activity.getString(R.string.dialog_button_cancel), null);
         builder.setView(dialogView);
         editText.setOnEditorActionListener((v, actionId, event) -> {
@@ -48,21 +55,34 @@ class PlaylistDialog {
             builder.setPositiveButton(activity.getString(R.string.dialog_button_add), (dialog, which) -> {
                 String text = editText.getText().toString();
                 if (text.isEmpty()) text = editText.getHint().toString();
-                activity.listOfPlaylists.addPlaylistTo(new Playlist(text, selectedIcon), whereToAdd);
+                String remoteId = null;
+                if (checkBox.isChecked()) {
+                    remoteId = editText2.getText().toString();
+                    remoteId = Playlist.getIdFrom(remoteId);
+                }
+                activity.listOfPlaylists.addPlaylistTo(new Playlist(text, selectedIcon, remoteId), whereToAdd);
                 activity.listOfPlaylistsAdapter.insertItem(whereToAdd);
                 activity.updateNoItemsView();
+                activity.listOfPlaylistsRecycler.scrollToPosition(whereToAdd);
             });
+            checkBox.setChecked(false);
+            checkBox.setEnabled(true);
         } else {
             toEdit = activity.listOfPlaylists.getPlaylistAt(_forPlaylist);
             editText.setText(toEdit.title);
             selectIcon(toEdit.icon);
             builder.setPositiveButton(activity.getString(R.string.dialog_button_apply), (dialog, which) -> {
                 String text = editText.getText().toString();
+                String remoteId = editText2.getText().toString();
                 toEdit.title = text;
                 toEdit.icon = selectedIcon;
+                if (checkBox.isChecked() && !remoteId.isEmpty()) toEdit.remoteId = remoteId;
                 if (activity.viewMode) activity.titleText.setText(text);
                 else activity.listOfPlaylistsAdapter.notifyItemChanged(_forPlaylist);
             });
+            checkBox.setEnabled(false);
+            checkBox.setChecked(toEdit.remote);
+            editText2.setText(toEdit.remoteId);
         }
 
         dialog = builder.create();
