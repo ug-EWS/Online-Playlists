@@ -8,7 +8,6 @@ import java.util.HashMap;
 
 public class Json {
     Json() {
-
     }
 
     public static String valueOf(ArrayList<String> list) {

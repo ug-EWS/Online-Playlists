@@ -23,9 +23,7 @@ public class YouTubeVideo {
         HashMap<String, Object> map = Json.toMap(_json);
         title = (String) map.get("title");
         id = (String) map.get("id");
-        if (map.containsKey("start")) {
-            musicStartSeconds = (int)(double)(Double) map.get("start");
-        }
+        musicStartSeconds = (int)(double)(Double) map.getOrDefault("start", 0);
         return this;
     }
 

@@ -64,18 +64,19 @@ public class ItemMoveCallback extends ItemTouchHelper.Callback {
     public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
         if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE && dX != 0 && isCurrentlyActive) {
             Drawable d = ContextCompat.getDrawable(adapter.getContext(), R.drawable.baseline_delete_forever_red_24);
-            assert d != null;
-            View itemView = viewHolder.itemView;
-            int iconWidth = d.getIntrinsicWidth();
-            int iconHeight = d.getIntrinsicHeight();
-            int cellHeight = itemView.getBottom() - itemView.getTop();
-            int iconTop = itemView.getTop() + (cellHeight - iconHeight) / 2;
-            int iconBottom = iconTop + iconHeight;
-            int margin = (int)((Math.abs(dX) - iconWidth) / 2);
-            int iconLeft = dX > 0 ? itemView.getLeft() + margin : itemView.getRight() - margin - iconWidth;
-            int iconRight = dX > 0 ? itemView.getLeft() + margin + iconWidth : itemView.getRight() - margin;
-            d.setBounds(iconLeft, iconTop, iconRight, iconBottom);
-            d.draw(c);
+            if (d != null) {
+                View itemView = viewHolder.itemView;
+                int iconWidth = d.getIntrinsicWidth();
+                int iconHeight = d.getIntrinsicHeight();
+                int cellHeight = itemView.getBottom() - itemView.getTop();
+                int iconTop = itemView.getTop() + (cellHeight - iconHeight) / 2;
+                int iconBottom = iconTop + iconHeight;
+                int margin = (int) ((Math.abs(dX) - iconWidth) / 2);
+                int iconLeft = dX > 0 ? itemView.getLeft() + margin : itemView.getRight() - margin - iconWidth;
+                int iconRight = dX > 0 ? itemView.getLeft() + margin + iconWidth : itemView.getRight() - margin;
+                d.setBounds(iconLeft, iconTop, iconRight, iconBottom);
+                d.draw(c);
+            }
         }
         super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
     }

@@ -33,8 +33,7 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         LayoutInflater inf = activity.getLayoutInflater();
-        //View itemView = inf.inflate(R.layout.video_item, parent, false);
-        View itemView = inf.inflate(R.layout.video_item_big, parent, false);
+        View itemView = inf.inflate(R.layout.video_item, parent, false);
         return new RecyclerView.ViewHolder(itemView) {};
     }
 
@@ -46,18 +45,13 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
 
         LinearLayout layout = itemView.findViewById(R.id.layout);
         ImageView thumbnail = itemView.findViewById(R.id.videoThumbnail);
-        ImageView thumbnailMini = itemView.findViewById(R.id.videoThumbnailMini);
         TextView title = itemView.findViewById(R.id.videoTitle);
         ImageView options = itemView.findViewById(R.id.videoOptions);
-        CardView card = itemView.findViewById(R.id.cardMini);
+        CardView card = itemView.findViewById(R.id.card);
         CheckBox checkBox = itemView.findViewById(R.id.checkBox);
 
         setItemOnClickListener(layout, pos);
         setItemOnLongClickListener(layout, pos);
-
-        layout.setBackgroundResource(activity.currentPlaylistIndex == activity.playingPlaylistIndex && activity.youTube.playingVideoIndex == pos
-                ? R.drawable.list_item_playing
-                : R.drawable.list_item);
 
         title.setTextColor(activity.getColor(playing ? R.color.green2: R.color.grey1));
         YouTubeVideo thisVideo = activity.currentPlaylist.getVideoAt(pos);
@@ -70,10 +64,7 @@ class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> impl
             title.setText(spannableString, TextView.BufferType.SPANNABLE);
         } else title.setText(thisVideo.title);
         Glide.with(activity).load(thisVideo.getThumbnailUrl()).into(thumbnail);
-        Glide.with(activity).load(thisVideo.getThumbnailUrl()).into(thumbnailMini);
         OnlinePlaylistsUtils.setDimensions(activity, card, activity.isPortrait ? 128 : 80, activity.isPortrait ? 72 : 45, 0);
-        //OnlinePlaylistsUtils.setDimensions(activity, card, -1, activity.isPortrait ? 200 : 100, 0);
-        //OnlinePlaylistsUtils.setDimensions(activity, title, LinearLayout.LayoutParams.WRAP_CONTENT, activity.isPortrait ? ViewGroup.LayoutParams.WRAP_CONTENT : LinearLayout.LayoutParams.MATCH_PARENT, 1);
         options.setVisibility(activity.selectionMode || activity.listSortMode || activity.searchMode ? View.GONE : View.VISIBLE);
         checkBox.setVisibility(activity.selectionMode ? View.VISIBLE : View.GONE);
         checkBox.setChecked(activity.selectedItems.contains(position));

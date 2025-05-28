@@ -13,6 +13,7 @@ import android.graphics.drawable.Icon;
 import android.media.MediaMetadata;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -33,10 +34,11 @@ import java.util.Calendar;
 import java.util.Random;
 
 public class PlaybackService extends Service {
+    private final ServiceBinder binder = new ServiceBinder();
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return binder;
     }
 
     private NotificationManager notificationManager;
@@ -72,6 +74,12 @@ public class PlaybackService extends Service {
 
     private final int SERVICE_NOTIFICATION = 101;
     private final int TIMEOUT_NOTIFICATION = 102;
+
+    public class ServiceBinder extends Binder {
+        public PlaybackService getService() {
+            return PlaybackService.this;
+        }
+    }
 
     @Override
     public void onCreate() {

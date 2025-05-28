@@ -31,9 +31,9 @@ public class YouTube {
     YouTubePlayer player;
     YouTubePlayerListener listener;
     IFramePlayerOptions options;
-    int currentSecond, playingVideoIndex, playMode, videoDuration;
+    int currentSecond, playingVideoIndex, playMode, videoDuration, startSeconds;
     MainActivity activity;
-    boolean isPlaying, shuffle, areControlsVisible, remotePlaylist;
+    boolean isPlaying, shuffle, areControlsVisible, remotePlaylist, shouldPlayWhenReady, autoPlay;
     ArrayList<Integer> playlistIndexes;
     LinearLayout bottomMainControls, speedControls, controls1, controls2;
     ConstraintLayout videoController;
@@ -42,6 +42,8 @@ public class YouTube {
     SeekBar seekBar, speedBar;
     ProgressBar videoProgressBar;
     Timer timer;
+    String videoId;
+
     private final PlayerConstants.PlaybackRate[] speeds = {
             PlayerConstants.PlaybackRate.RATE_0_25,
             PlayerConstants.PlaybackRate.RATE_0_5,
@@ -79,7 +81,7 @@ public class YouTube {
             @Override
             public void onReady(@NonNull YouTubePlayer _youTubePlayer) {
                 player = _youTubePlayer;
-                if (activity.serviceRunning) activity.continuePlayback();
+                if (shouldPlayWhenReady) playVideo(videoId, startSeconds, autoPlay);
                 if (remotePlaylist) {
                     player.setShuffle(shuffle);
                     play();
@@ -177,7 +179,7 @@ public class YouTube {
         setMusicStart = mainView.findViewById(R.id.openInYoutube);
         setMusicStart.setVisibility(remotePlaylist ? View.GONE : View.VISIBLE);
         setMusicStart.setOnClickListener(v -> {
-            activity.playingVideo.musicStartSeconds = currentSecond;
+            activity.playingVideo.musicStartSeconds = seekBar.getProgress();
             activity.showMessage(R.string.music_start_point_set);
         });
         fullscreen = mainView.findViewById(R.id.fullscreen);
@@ -218,6 +220,7 @@ public class YouTube {
         });
         videoProgressBar = mainView.findViewById(R.id.progressBar2);
     }
+
     private void setControlsVisibility(boolean _areControlsVisible) {
         areControlsVisible = _areControlsVisible;
         ObjectAnimator animator = ObjectAnimator.ofObject(videoController,"alpha",  new FloatEvaluator(), areControlsVisible ? 1 : 0);
@@ -242,6 +245,18 @@ public class YouTube {
             @Override public void onAnimationRepeat(@NonNull Animator animation) {}
         });
         animator.start();
+    }
+
+    public void playVideo(String _videoId, int _startSeconds, boolean _autoPlay) {
+        if (player == null) {
+            shouldPlayWhenReady = true;
+            videoId = _videoId;
+            startSeconds = _startSeconds;
+            autoPlay = _autoPlay;
+        } else {
+            if (_autoPlay) player.loadVideo(_videoId, _startSeconds);
+            else  player.cueVideo(_videoId, _startSeconds);
+        }
     }
 
     public void playPause() {

@@ -1,6 +1,15 @@
 package com.example.onlineplaylists;
 
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.CheckBox;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
@@ -10,6 +19,7 @@ class ManagePlaylistsDialog {
 
     AlertDialog.Builder builder;
     AlertDialog dialog;
+    RecyclerView recyclerView;
 
     ListOfPlaylists listOfPlaylists;
     Playlist currentPlaylist;
@@ -19,9 +29,7 @@ class ManagePlaylistsDialog {
     ArrayList<Integer> forVideos;
     ArrayList<Integer> originalIndexes;
     boolean[] contains;
-    CharSequence[] itemsArr;
     int length;
-    int length2;
 
     ManagePlaylistsDialog (MainActivity _activity, int _forVideo) {
         initializeDialog(_activity);
@@ -39,13 +47,9 @@ class ManagePlaylistsDialog {
             }
         }
 
-        itemsArr = items.toArray(new CharSequence[0]);
-        length2 = items.size();
-        contains = new boolean[length2];
-
-        builder.setMultiChoiceItems(itemsArr, null, (dialog1, which, isChecked) -> {
-            contains[which] = isChecked;
-        });
+        length = items.size();
+        contains = new boolean[length];
+        recyclerView.setAdapter(new ManagePlaylistsAdapter());
 
         builder.setPositiveButton(R.string.copy, (dialog1, which) -> {
             copyVideo();
@@ -77,12 +81,9 @@ class ManagePlaylistsDialog {
             }
         }
 
-        itemsArr = items.toArray(new CharSequence[0]);
+        length = items.size();
         contains = new boolean[length];
-
-        builder.setMultiChoiceItems(itemsArr, null, (dialog1, which, isChecked) -> {
-            contains[which] = isChecked;
-        });
+        recyclerView.setAdapter(new ManagePlaylistsAdapter());
 
         builder.setPositiveButton(R.string.copy, (dialog1, which) -> {
             copyVideos();
@@ -107,13 +108,19 @@ class ManagePlaylistsDialog {
         builder = new AlertDialog.Builder(activity, R.style.Theme_OnlinePlaylistsDialog);
         builder.setTitle(R.string.add_to_playlist);
         builder.setNegativeButton(R.string.dialog_button_cancel, null);
+        recyclerView = new RecyclerView(activity);
+        recyclerView.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        recyclerView.setLayoutManager(new LinearLayoutManager(activity));
+
+        builder.setView(recyclerView);
     }
 
     private void copyVideo() {
-        for (int i = 0; i < length2; i++) {
+        for (int i = 0; i < length; i++) {
             Playlist playlist = listOfPlaylists.getPlaylistAt(originalIndexes.get(i));
             if (contains[i]) {
                 playlist.addVideo(video);
+                if (activity.playingPlaylistIndex == originalIndexes.get(i)) activity.youTube.playingVideoIndex++;
             }
         }
     }
@@ -126,6 +133,7 @@ class ManagePlaylistsDialog {
                     YouTubeVideo youTubeVideo = activity.currentPlaylist.getVideoAt(forVideos.get(j));
                     if (!playlist.contains(youTubeVideo)) playlist.addVideo(youTubeVideo);
                 }
+                if (activity.playingPlaylistIndex == originalIndexes.get(i)) activity.youTube.playingVideoIndex += forVideos.size();
             }
         }
     }
@@ -133,5 +141,49 @@ class ManagePlaylistsDialog {
     public void show() {
         if (items.isEmpty()) activity.showMessage(R.string.no_playlist_found);
         else dialog.show();
+    }
+
+    private class ManagePlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+        Integer[] icons = {
+                R.drawable.baseline_featured_play_list_24,
+                R.drawable.baseline_favorite_24,
+                R.drawable.baseline_library_music_24,
+                R.drawable.baseline_videogame_asset_24,
+                R.drawable.baseline_movie_creation_24};
+        @NonNull
+        @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            return new RecyclerView.ViewHolder(activity.getLayoutInflater().inflate(R.layout.playlist_item, parent, false)) {};
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+            View view = holder.itemView;
+            int pos = holder.getAdapterPosition();
+            LinearLayout layout = view.findViewById(R.id.layout);
+            CheckBox checkBox = view.findViewById(R.id.checkBox);
+            ImageView icon = view.findViewById(R.id.playlistIcon);
+            TextView title = view.findViewById(R.id.playlistTitle);
+            TextView size = view.findViewById(R.id.playlistSize);
+
+            Playlist playlist = listOfPlaylists.getPlaylistAt(originalIndexes.get(pos));
+            icon.setImageResource(icons[playlist.icon]);
+            title.setText(playlist.title);
+            size.setText(String.valueOf(playlist.getLength()).concat(" video"));
+            checkBox.setChecked(contains[pos]);
+            setOnClickListener(layout, pos);
+        }
+
+        @Override
+        public int getItemCount() {
+            return length;
+        }
+
+        private void setOnClickListener(View view, int position) {
+            view.setOnClickListener(v -> {
+                contains[position] = !contains[position];
+                notifyItemChanged(position);
+            });
+        }
     }
 }

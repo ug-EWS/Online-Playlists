@@ -28,7 +28,7 @@
     <color name="grey7">#80404040</color>
     <color name="grey8">@color/very_dark_grey</color>
     <color name="grey9">#CC404040</color>
-    <color name="grey10">@color/less_light_grey</color>
+    <color name="grey10">#FF141414</color>
     <color name="green1">#80408040</color>
     <color name="green2">#FF00FF00</color>
     <color name="green3">#CC409E40</color>

@@ -31,21 +31,21 @@ public class Playlist {
         remoteId = _remoteId;
     }
 
-    public Playlist fromJson (String _json) {
-        videos = new ArrayList<>();
+    public Playlist fromJson(String _json) {
         HashMap<String, Object> map = Json.toMap(_json);
-        ArrayList<String> sourceList = Json.toList((String) map.get("videos"));
-        title = (String) map.get("title");
-        icon = map.containsKey("icon") ? Integer.parseInt((String) map.get("icon")) : 0;
-        remote = (boolean) map.getOrDefault("remote", false);
-        remoteId = (String) map.getOrDefault("remoteId", "");
-        YouTubeVideo ytv;
 
-        for (String i: sourceList) {
+        title = (String) map.get("title");
+        icon = Integer.parseInt((String) map.get("icon"));
+        remote = (Boolean) map.getOrDefault("remote", false);
+        remoteId = (String) map.getOrDefault("remoteId", "");
+
+        ArrayList<String> sourceList = Json.toList((String) map.get("videos"));
+        videos = new ArrayList<>();
+        YouTubeVideo ytv;
+        for (String i : sourceList) {
             ytv = new YouTubeVideo().fromJson(i);
             videos.add(ytv);
         }
-
         return this;
     }
 
@@ -80,15 +80,8 @@ public class Playlist {
     }
 
     public void moveVideo(int from, int to) {
-        if (from < to) {
-            for (int i = from; i < to; i++) {
-                Collections.swap(videos, i, i + 1);
-            }
-        } else {
-            for (int i = from; i > to; i--) {
-                Collections.swap(videos, i, i - 1);
-            }
-        }
+        if (from < to) for (int i = from; i < to; i++) Collections.swap(videos, i, i + 1);
+        else for (int i = from; i > to; i--) Collections.swap(videos, i, i - 1);
     }
 
     public YouTubeVideo getVideoAt(int index) {
@@ -118,7 +111,7 @@ public class Playlist {
         return _contains;
     }
 
-    public String getJson(){
+    public String getJson() {
         HashMap<String, Object> map = new HashMap<>();
         ArrayList<String> list = new ArrayList<>();
         for (YouTubeVideo i : videos) {

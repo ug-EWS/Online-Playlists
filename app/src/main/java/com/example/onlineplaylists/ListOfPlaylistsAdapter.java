@@ -57,9 +57,7 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         setItemOnClickListener(layout, pos);
         setItemOnLongClickListener(layout, pos);
 
-        layout.setBackgroundResource(
-                activity.playingPlaylistIndex == pos ? R.drawable.list_item_playing
-                        : R.drawable.list_item);
+        icon.setBackgroundResource(activity.playingPlaylistIndex == pos ? R.drawable.playlist_icon_playing : R.drawable.playlist_icon);
 
         int iconIndex = playlist.icon;
         if (iconIndex > 4 || iconIndex < 0) iconIndex = 0;
@@ -127,9 +125,10 @@ class ListOfPlaylistsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     activity.updateToolbar();
                 }
             }
-            else if (!activity.listSortMode)
+            else if (!activity.listSortMode) {
                 activity.openPlaylist(position);
-            if (activity.searchMode) activity.setSearchMode(false);
+                if (activity.searchMode) activity.setSearchMode(false);
+            }
         });
     }
     private void setItemOnLongClickListener(View _view, int position) {

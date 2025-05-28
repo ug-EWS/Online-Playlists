@@ -77,15 +77,8 @@ public class ListOfPlaylists {
     }
 
     public void movePlaylist(int from, int to) {
-        if (from < to) {
-            for (int i = from; i < to; i++) {
-                Collections.swap(playlists, i, i + 1);
-            }
-        } else {
-            for (int i = from; i > to; i--) {
-                Collections.swap(playlists, i, i - 1);
-            }
-        }
+        if (from < to) for (int i = from; i < to; i++) Collections.swap(playlists, i, i + 1);
+        else for (int i = from; i > to; i--) Collections.swap(playlists, i, i - 1);
     }
 
     public String mergePlaylists(@NonNull ArrayList<Integer> indexes) {

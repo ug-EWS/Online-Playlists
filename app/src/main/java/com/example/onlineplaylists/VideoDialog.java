@@ -136,6 +136,7 @@ class VideoDialog {
         webView.onResume();
         webView.reload();
         dialog.show();
+        editText.requestFocus();
     }
 
     private void dismiss() {
